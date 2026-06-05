@@ -13,13 +13,16 @@
   const p        = document.getElementById("p");
   const title    = document.getElementById("title");
   const category = document.getElementById("category");
+  const subcat   = document.getElementById("subcategory");
   const details  = document.getElementById("details");
   const img      = document.getElementById("img");
   const list     = document.getElementById("list");
   const catList  = document.getElementById("catList");
   const newCat   = document.getElementById("newCat");
+  const addSubInline = document.getElementById("addSubInline");
 
   let categoriesCache = [];
+  let subCatsCache    = [];
 
   function authHeader(){
     return { "Authorization": "Basic " + btoa(credentials.u + ":" + credentials.p) };
@@ -142,6 +145,8 @@
         renderCategorySelect();
         renderCategoryList();
         if(typeof renderSubCatParent === "function") renderSubCatParent();
+        /* category select refresh হলে form-এর sub-dropdown আপডেট করি */
+        if(typeof renderSubcategorySelect === "function") renderSubcategorySelect();
       })
       .catch(err => console.error("Category load failed:", err));
   }
@@ -244,7 +249,6 @@
   const subCatParent = document.getElementById("subCatParent");
   const subCatName   = document.getElementById("subCatName");
   const subCatList   = document.getElementById("subCatList");
-  let subCatsCache   = []; /* all subcategories grouped by parent */
 
   function loadSubCategories(){
     fetch("/api/subcategories", { headers: authHeader() })
@@ -253,10 +257,76 @@
         subCatsCache = rows || [];
         renderSubCatParent();
         renderSubCatList();
+        renderSubcategorySelect(); /* form-এর dropdown আপডেট */
       })
       .catch(() => {
         if(subCatList) subCatList.innerHTML = `<div class="empty" style="font-size:14px;padding:20px;">লোড করা যাচ্ছে না</div>`;
       });
+  }
+
+  /* ===== FORM-এর SUB-CATEGORY DROPDOWN ===== */
+  function renderSubcategorySelect(){
+    if(!subcat) return;
+    const prev    = subcat.value;
+    const parent  = category.value || "";
+    subcat.innerHTML = "";
+
+    /* placeholder */
+    const ph = document.createElement("option");
+    ph.value = "";
+    ph.textContent = parent ? `— Sub-category (optional) —` : `— আগে main category বাছাই করুন —`;
+    subcat.appendChild(ph);
+
+    if(!parent) return;
+
+    const matching = (subCatsCache || []).filter(s => s.category === parent);
+    for (const s of matching) {
+      const opt = document.createElement("option");
+      opt.value = s.name;
+      opt.textContent = s.name + (s.newsCount ? ` (${s.newsCount})` : "");
+      subcat.appendChild(opt);
+    }
+    /* যদি পুরনো subcategory cache-এ না থাকে (যেমন মুছে ফেলা হয়েছে),
+       তাও dropdown-এ দেখাই — যাতে edit করার সময় context হারায় না */
+    if(prev && !matching.some(s => s.name === prev)){
+      const opt = document.createElement("option");
+      opt.value = prev;
+      opt.textContent = prev + " (মুছে ফেলা)";
+      opt.style.color = "#888";
+      subcat.appendChild(opt);
+    }
+    if(prev){
+      subcat.value = prev;
+    }
+  }
+
+  /* category বদলালে sub-dropdown refresh হবে */
+  if(category){
+    category.addEventListener("change", renderSubcategorySelect);
+  }
+
+  /* "+ নতুন sub" button — prompt এ নাম নিয়ে inline add */
+  if(addSubInline){
+    addSubInline.addEventListener("click", async () => {
+      const parent = (category && category.value) || "";
+      if(!parent){ alert("আগে main category বাছাই করুন"); return; }
+      const name = (prompt(`“${parent}” category-তে নতুন sub-category এর নাম:`) || "").trim();
+      if(!name) return;
+      try {
+        const r = await fetch("/api/subcategories", {
+          method: "POST",
+          headers: { ...authHeader(), "Content-Type": "application/json" },
+          body: JSON.stringify({ category: parent, name })
+        });
+        const data = await r.json().catch(() => ({}));
+        if(r.status === 401){ alert("Session expired."); logout(); return; }
+        if(!r.ok){ alert(data.error || "Add failed"); return; }
+        await loadSubCategories();
+        if(subcat) subcat.value = name;
+      } catch (e) {
+        alert("Add failed: " + e.message);
+      }
+    });
   }
 
   function renderSubCatParent(){
@@ -399,14 +469,20 @@
       .then(n => {
         title.value    = n.title;
         category.value = n.category;
+        renderSubcategorySelect();
+        /* subcat dropdown render হওয়ার পর value সেট করি (subCategories loaded হলে
+           option exist করবে, না হলে fallback হিসেবে নিচে সরাসরি সেট) */
+        if(subcat){
+          const exists = Array.from(subcat.options).some(o => o.value === (n.subcategory || ""));
+          if(exists || !n.subcategory) subcat.value = n.subcategory || "";
+        }
         details.value  = n.details;
         document.getElementById("imageUrl").value  = (n.image && !n.image.startsWith("data:")) ? n.image : "";
         document.getElementById("video").value     = n.video || "";
-        document.getElementById("subcategory").value = n.subcategory || "";
         editId         = id;
         img.value      = "";
         const card = document.querySelector(".card h3");
-        if(card) card.innerText = "Editing: " + (n.title.length > 40 ? n.title.slice(0,40) + "…" : n.title);
+        if(card) card.innerText = "Editing: " + (n.title.length > 40 ? n.title.slice(0,40) + "." : n.title);
         window.scrollTo({ top: 0, behavior: "smooth" });
       })
       .catch(err => alert("Edit load failed: " + err.message));
@@ -435,7 +511,10 @@
     img.value     = "";
     const iu = document.getElementById("imageUrl");     if(iu) iu.value = "";
     const vv = document.getElementById("video");        if(vv) vv.value = "";
-    const ss = document.getElementById("subcategory");  if(ss) ss.value = "";
+    if(subcat){
+      /* category select রাখি, শুধু subcat empty করে dropdown refresh করি */
+      renderSubcategorySelect();
+    }
     editId        = null;
     const card = document.querySelector(".card h3");
     if(card) card.innerText = "Add / Edit News";

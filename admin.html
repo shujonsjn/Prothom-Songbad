@@ -43,7 +43,13 @@
 
     <input id="title" placeholder="Title">
     <select id="category"></select>
-    <input id="subcategory" placeholder="Sub-category (optional) — যেমন: ক্রিকেট, ফুটবল">
+
+    <div style="display:flex;gap:8px;align-items:stretch;margin:0;">
+      <select id="subcategory" style="flex:1;margin:0;">
+        <option value="">— Sub-category (optional) —</option>
+      </select>
+      <button type="button" id="addSubInline" style="width:auto;padding:0 16px;margin:0;background:#c1131d;color:#fff;border:none;font-size:13px;letter-spacing:.04em;" title="এই category-তে নতুন sub যোগ করুন">+ নতুন sub</button>
+    </div>
 
     <textarea id="details" placeholder="Details"></textarea>
     <input type="file" id="img">
