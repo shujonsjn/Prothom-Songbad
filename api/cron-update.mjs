@@ -128,22 +128,24 @@ function pickArticleBody(html) {
 /* Extract a video URL from the article page.
    Prothom Alo typically uses YouTube embeds via `VideoObject.embedUrl`. */
 function pickVideoUrl(html) {
-  /* 1. JSON-LD: VideoObject.embedUrl */
-  const re1 = /"@type"\s*:\s*"VideoObject"[\s\S]*?"embedUrl"\s*:\s*"([^"]+)"/;
-  const m1 = html.match(re1);
-  if (m1) return m1[1];
+  /* 1. JSON-LD: same script block has both VideoObject + embedUrl.
+        embedUrl sometimes appears before @type, so use a wider regex. */
+  const mScript = html.match(/<script[^>]*application\/ld\+json[^>]*>([\s\S]*?)<\/script>/gi) || [];
+  for (const s of mScript) {
+    if (!/"@type"\s*:\s*"VideoObject"/.test(s)) continue;
+    const m1 = s.match(/"embedUrl"\s*:\s*"([^"]+)"/);
+    if (m1) return m1[1];
+    const m2 = s.match(/"contentUrl"\s*:\s*"([^"]+)"/);
+    if (m2) return m2[1];
+  }
   /* 2. <video src="…"> */
   const re2 = /<video[^>]*\ssrc=["']([^"']+)["']/i;
   const m2 = html.match(re2);
   if (m2) return m2[1];
-  /* 3. <iframe src="…youtube…"> */
-  const re3 = /<iframe[^>]*\ssrc=["']([^"']*(?:youtube\.com|youtu\.be)[^"']*)["']/i;
+  /* 3. <iframe src="…youtube/vimeo…"> */
+  const re3 = /<iframe[^>]*\ssrc=["']([^"']*(?:youtube\.com|youtu\.be|player\.vimeo\.com)[^"']*)["']/i;
   const m3 = html.match(re3);
   if (m3) return m3[1];
-  /* 4. JSON-LD: VideoObject.contentUrl */
-  const re4 = /"@type"\s*:\s*"VideoObject"[\s\S]*?"contentUrl"\s*:\s*"([^"]+)"/;
-  const m4 = html.match(re4);
-  if (m4) return m4[1];
   return null;
 }
 
