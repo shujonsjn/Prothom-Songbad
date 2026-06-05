@@ -17,9 +17,10 @@
   const sideNews = document.getElementById("sideNews");
   const ticker   = document.getElementById("ticker");
 
-  /* ===== Active category from URL (nav.js handles highlighting) ===== */
+  /* ===== Active category + sub-category from URL ===== */
   const params = new URLSearchParams(window.location.search);
   const activeCat = params.get("cat") || "all";
+  const activeSub = params.get("sub") || null;
 
   let data = [];
 
@@ -38,11 +39,21 @@
   function loadNews(){
     if(!mainNews) return;
     if(data.length === 0){
-      const msg = activeCat && activeCat !== "all"
-        ? `“${activeCat}” ক্যাটাগরিতে কোনো সংবাদ নেই`
-        : `কোনো সংবাদ পাওয়া যায়নি`;
+      const msg = activeSub
+        ? `“${activeSub}” সাব-ক্যাটাগরিতে এখনো কোনো সংবাদ নেই`
+        : activeCat && activeCat !== "all"
+          ? `“${activeCat}” ক্যাটাগরিতে কোনো সংবাদ নেই`
+          : `কোনো সংবাদ পাওয়া যায়নি`;
       mainNews.innerHTML = `<div class="empty">${msg}</div>`;
       return;
+    }
+
+    /* Active sub-category tag */
+    if(activeSub && activeCat && activeCat !== "all"){
+      const tag = document.createElement("div");
+      tag.className = "active-sub-tag";
+      tag.innerHTML = `<a href="index.html?cat=${encodeURIComponent(activeCat)}">${esc(activeCat)}</a> <span>›</span> <strong>${esc(activeSub)}</strong>`;
+      mainNews.parentNode.insertBefore(tag, mainNews);
     }
 
     const hero = data[0];

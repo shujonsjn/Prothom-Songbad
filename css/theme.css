@@ -101,6 +101,68 @@ img{display:block;max-width:100%}
   color:#0a0a0a;
 }
 
+/* ===== MEGA MENU (Prothom Alo style) ===== */
+.nav-dropdown{
+  position:relative;
+  background:#faf6ec;
+  border-bottom:1px solid #0a0a0a;
+  overflow:hidden;
+  max-height:0;
+  opacity:0;
+  transition:max-height .25s ease, opacity .2s ease;
+}
+.nav-dropdown.open{
+  max-height:200px;
+  opacity:1;
+}
+.nav-dropdown .nav-panel{
+  max-width:1300px;
+  margin:0 auto;
+  padding:22px 20px 26px;
+}
+.nav-dropdown .nav-panel-title{
+  display:block;
+  font-family:'Hind Siliguri',sans-serif;
+  font-size:48px;
+  font-weight:700;
+  color:#c1131d;
+  line-height:1;
+  margin-bottom:18px;
+  letter-spacing:-0.01em;
+  text-decoration:none;
+  transition:color .15s;
+}
+.nav-dropdown .nav-panel-title:hover{color:#8a0d15;text-decoration:underline}
+.nav-dropdown .nav-sub-row{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:0;
+  font-family:'Hind Siliguri',sans-serif;
+}
+.nav-dropdown .nav-sub-row a{
+  font-size:15px;
+  color:#1a1a1a;
+  text-decoration:none;
+  padding:2px 4px;
+  border:0;
+  text-transform:none;
+  letter-spacing:0;
+  font-weight:400;
+  transition:color .15s;
+}
+.nav-dropdown .nav-sub-row a:hover{color:#c1131d}
+.nav-dropdown .nav-sub-row .dot{
+  color:#c1131d;
+  margin:0 8px;
+  font-weight:700;
+}
+@media(max-width:700px){
+  .nav-dropdown.open{max-height:340px}
+  .nav-dropdown .nav-panel-title{font-size:34px}
+  .nav-dropdown .nav-sub-row a{font-size:13px}
+}
+
 /* ===== BREAKING TICKER ===== */
 .breaking{
   background:#0a0a0a;
@@ -310,6 +372,20 @@ img{display:block;max-width:100%}
   font-size:24px;
   font-family:'Playfair Display',serif;
 }
+
+/* ===== BREADCRUMB (sub-category) ===== */
+.active-sub-tag{
+  max-width:1300px;
+  margin:24px auto 0;
+  padding:0 20px 6px;
+  font-family:'Hind Siliguri',sans-serif;
+  font-size:18px;
+  color:#1a1a1a;
+}
+.active-sub-tag a{color:#0a0a0a;text-decoration:none;border-bottom:2px solid #c1131d}
+.active-sub-tag a:hover{color:#c1131d}
+.active-sub-tag span{margin:0 6px;color:#888}
+.active-sub-tag strong{color:#c1131d}
 
 /* ===== FOOTER ===== */
 footer{
