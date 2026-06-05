@@ -208,8 +208,17 @@ export default async function handler(req, res) {
           ? `${it.description}\n\n— সূত্র: Prothom Alo (${it.link})`
           : `Prothom Alo থেকে সংগৃহীত।\nসূত্র: ${it.link}`;
 
-      if (await titleExists(it.title)) {
-        skipped.push({ title: it.title, reason: "duplicate" });
+      const existing = await get("SELECT id, details FROM news WHERE title = ? LIMIT 1", it.title);
+      if (existing) {
+        /* যদি আগের details খুব ছোট হয় (শুধু og:description ছিল),
+           তাহলে full body দিয়ে update করি — self-healing। */
+        if ((existing.details || "").length < 300 && it.body && it.body.length > 40) {
+          const newDetails = `${it.body}\n\n— সূত্র: Prothom Alo (${it.link})`.slice(0, 8000);
+          await run("UPDATE news SET details = ? WHERE id = ?", newDetails, existing.id);
+          added.push({ id: existing.id, title: it.title, action: "updated" });
+        } else {
+          skipped.push({ id: existing.id, title: it.title, reason: "duplicate" });
+        }
         continue;
       }
       try {
