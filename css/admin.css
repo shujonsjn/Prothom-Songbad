@@ -1,0 +1,241 @@
+/* ==========================================================
+   ADMIN.CSS — Newspaper-style admin panel
+   Monochrome, Playfair Display + Hind Siliguri
+   ========================================================== */
+
+*{margin:0;padding:0;box-sizing:border-box}
+
+body{
+  font-family:'Hind Siliguri',sans-serif;
+  background:#f5f1e8;
+  color:#0a0a0a;
+  line-height:1.5;
+}
+
+/* ===== LOGIN ===== */
+.login{
+  min-height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  background:#f5f1e8;
+  padding:20px;
+}
+
+.box{
+  background:#ffffff;
+  padding:40px 36px;
+  width:380px;
+  border-radius:6px;
+  border:1px solid #0a0a0a;
+  box-shadow:0 0 0 4px #f5f1e8,0 0 0 5px #0a0a0a;
+}
+
+.box .masthead{
+  text-align:center;
+  font-family:'Playfair Display',serif;
+  font-weight:900;
+  font-size:28px;
+  letter-spacing:0.05em;
+  padding-bottom:14px;
+  margin-bottom:22px;
+  border-bottom:3px double #0a0a0a;
+}
+
+.box .sub{
+  text-align:center;
+  font-size:13px;
+  color:#6b6b6b;
+  margin-bottom:22px;
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+}
+
+/* ===== INPUTS ===== */
+input,textarea,select{
+  width:100%;
+  padding:10px 4px;
+  margin:10px 0;
+  background:transparent;
+  border:none;
+  border-bottom:1px solid #0a0a0a;
+  border-radius:0;
+  font-family:'Hind Siliguri',sans-serif;
+  font-size:15px;
+  color:#0a0a0a;
+  outline:none;
+  transition:border-color .2s;
+}
+
+input:focus,textarea:focus,select:focus{
+  border-bottom:2px solid #0a0a0a;
+}
+
+textarea{resize:vertical;min-height:90px;padding-top:12px}
+
+input[type="file"]{
+  border-bottom:none;
+  padding:8px 0;
+  font-size:13px;
+}
+
+/* ===== BUTTONS ===== */
+button{
+  width:100%;
+  padding:12px;
+  background:#0a0a0a;
+  color:#f5f1e8;
+  border:1px solid #0a0a0a;
+  border-radius:4px;
+  font-family:'Hind Siliguri',sans-serif;
+  font-size:14px;
+  font-weight:600;
+  letter-spacing:0.12em;
+  text-transform:uppercase;
+  cursor:pointer;
+  transition:all .2s;
+  margin-top:6px;
+}
+
+button:hover{
+  background:#f5f1e8;
+  color:#0a0a0a;
+}
+
+/* ===== ADMIN PANEL ===== */
+.admin{
+  display:none;
+  max-width:960px;
+  margin:0 auto;
+  padding:30px 24px 60px;
+}
+
+.masthead-bar{
+  text-align:center;
+  padding:20px 0 14px;
+  border-bottom:3px double #0a0a0a;
+  margin-bottom:30px;
+}
+
+.masthead-bar h1{
+  font-family:'Playfair Display',serif;
+  font-weight:900;
+  font-size:42px;
+  letter-spacing:0.04em;
+  text-transform:uppercase;
+}
+
+.masthead-bar .tagline{
+  font-size:12px;
+  letter-spacing:0.3em;
+  color:#6b6b6b;
+  text-transform:uppercase;
+  margin-top:6px;
+}
+
+.card{
+  background:#ffffff;
+  padding:26px 28px;
+  margin-bottom:28px;
+  border-radius:6px;
+  border:1px solid #0a0a0a;
+  box-shadow:0 1px 4px rgba(0,0,0,0.06);
+}
+
+.card h3{
+  font-family:'Playfair Display',serif;
+  font-weight:700;
+  font-size:22px;
+  margin-bottom:18px;
+  padding-bottom:10px;
+  border-bottom:1px solid #0a0a0a;
+}
+
+.section-title{
+  font-family:'Playfair Display',serif;
+  font-weight:700;
+  font-size:24px;
+  margin:30px 0 14px;
+  padding-bottom:8px;
+  border-bottom:3px double #0a0a0a;
+}
+
+/* ===== NEWS LIST ===== */
+.news-item{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:16px;
+  background:#ffffff;
+  padding:16px 18px;
+  margin-top:12px;
+  border-radius:6px;
+  border:1px solid #0a0a0a;
+  box-shadow:0 1px 3px rgba(0,0,0,0.05);
+}
+
+.news-item .info b{
+  font-family:'Playfair Display',serif;
+  font-size:17px;
+  font-weight:700;
+  display:block;
+  margin-bottom:4px;
+}
+
+.news-item .info small{
+  font-size:11px;
+  letter-spacing:0.2em;
+  text-transform:uppercase;
+  color:#6b6b6b;
+}
+
+.actions{display:flex;gap:6px;flex-shrink:0}
+
+.small-btn{
+  width:auto;
+  padding:7px 14px;
+  margin:0;
+  font-size:11px;
+  background:transparent;
+  color:#0a0a0a;
+  border:1px solid #0a0a0a;
+  border-radius:4px;
+  letter-spacing:0.12em;
+}
+
+.small-btn:hover{
+  background:#0a0a0a;
+  color:#f5f1e8;
+}
+
+/* ===== CATEGORY LIST ===== */
+.cat-item{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:16px;
+  background:#f5f1e8;
+  padding:12px 16px;
+  margin-top:10px;
+  border-radius:4px;
+  border:1px solid #0a0a0a;
+}
+
+.cat-item .cat-info{
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+}
+
+.cat-item .cat-info b{
+  font-family:'Playfair Display',serif;
+  font-size:16px;
+  font-weight:700;
+}
+
+.cat-item .cat-info small{
+  font-size:11px;
+  letter-spacing:0.15em;
+  text-transform:uppercase;
+  color:#6b6b6b;
+}

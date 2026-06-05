@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Admin Panel — প্রথম সংবাদ</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="css/admin.css">
+
+</head>
+
+<body>
+
+<!-- LOGIN -->
+<div class="login" id="loginBox">
+  <div class="box">
+    <div class="masthead">The Editorial Desk</div>
+    <div class="sub">Sign in to continue</div>
+    <input id="u" placeholder="Username">
+    <input id="p" type="password" placeholder="Password">
+    <button onclick="login()">Login</button>
+    <div style="text-align:center;margin-top:14px;font-size:13px;">
+      <a href="index.html" style="color:#0a0a0a;text-decoration:underline;">← হোমপেজে ফিরুন</a>
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN PANEL -->
+<div class="admin" id="admin">
+
+  <div class="masthead-bar">
+    <h1>The Newsroom</h1>
+    <div class="tagline">Editorial Dashboard · <a href="index.html" style="color:#0a0a0a;text-decoration:underline;margin-right:12px;">Home</a>· <a href="#" onclick="logout();return false;" style="color:#0a0a0a;text-decoration:underline;">Logout</a></div>
+  </div>
+
+  <div class="card">
+    <h3>Add / Edit News</h3>
+
+    <input id="title" placeholder="Title">
+    <select id="category"></select>
+
+    <textarea id="details" placeholder="Details"></textarea>
+    <input type="file" id="img">
+
+    <button onclick="save()">Publish</button>
+  </div>
+
+  <h3 class="section-title">All Published Stories</h3>
+  <div id="list"></div>
+
+  <h3 class="section-title">Manage Categories</h3>
+  <div class="card">
+    <p style="font-size:13px;color:#6b6b6b;letter-spacing:.05em;margin-bottom:14px;">
+      নতুন ক্যাটাগরি যোগ করুন অথবা অপ্রয়োজনীয় ক্যাটাগরি মুছুন
+    </p>
+
+    <div style="display:flex;gap:8px;align-items:flex-end;">
+      <input id="newCat" placeholder="নতুন ক্যাটাগরির নাম" style="flex:1;margin:0;">
+      <button onclick="addCategory()" style="width:auto;padding:10px 20px;margin:0;">Add</button>
+    </div>
+
+    <div id="catList" style="margin-top:18px;"></div>
+  </div>
+
+</div>
+
+<script src="js/admin.js"></script>
+
+</body>
+</html>

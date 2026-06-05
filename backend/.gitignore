@@ -1,0 +1,15 @@
+node_modules/
+data.db
+data.db-journal
+data.db-wal
+data.db-shm
+uploads/
+*.log
+.env
+
+.DS_Store
+Thumbs.db
+
+.vscode/
+.idea/
+*.swp

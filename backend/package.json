@@ -1,0 +1,18 @@
+{
+  "name": "news-backend",
+  "version": "1.0.0",
+  "description": "Backend server for প্রথম সংবাদ — Express + node:sqlite + Basic Auth",
+  "type": "module",
+  "main": "server.js",
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "multer": "^2.0.0"
+  }
+}
