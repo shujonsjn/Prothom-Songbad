@@ -18,12 +18,13 @@ const client = tursoUrl
   ? createClient({ url: tursoUrl, authToken: tursoToken })
   : createClient({ url: "file:./data.db" });
 
-/* Schema init (cron আগে চললে video কলাম add করি) */
+/* Schema init (cron আগে চললে video/subcategory কলাম add করি) */
 await client.execute(`
   CREATE TABLE IF NOT EXISTS news (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     title       TEXT    NOT NULL,
     category    TEXT    NOT NULL,
+    subcategory TEXT,
     details     TEXT    NOT NULL,
     image       TEXT,
     video       TEXT,
@@ -32,6 +33,7 @@ await client.execute(`
   )
 `).catch(() => {});
 try { await client.execute("ALTER TABLE news ADD COLUMN video TEXT"); } catch {}
+try { await client.execute("ALTER TABLE news ADD COLUMN subcategory TEXT"); } catch {}
 
 async function all(sql, ...args) {
   const r = await client.execute({ sql, args });
@@ -162,6 +164,44 @@ function toEmbedUrl(url) {
   return url; /* raw .mp4 / .m3u8 — ব্রাউজারই play করবে */
 }
 
+/* Prothom Alo URL → subcategory slug → বাংলা নাম
+   e.g. /sports/cricket/article-x → ক্রিকেট
+         /sports/football/...     → ফুটবল
+         /video/sports/article-y  → ভিডিও
+         /sports/article-z        → null (খেলা-ই main) */
+const SLUG_TO_BN = {
+  cricket:    "ক্রিকেট",
+  football:   "ফুটবল",
+  tennis:     "টেনিস",
+  hockey:     "হকি",
+  badminton:  "ব্যাডমিন্টন",
+  kabaddi:    "কাবাডি",
+  golf:       "গলফ",
+  chess:      "দাবা",
+  archery:    "তীরন্দাজি",
+  athletics:  "অ্যাথলেটিক্স",
+  swimming:   "সাঁতার",
+  boxing:     "বক্সিং",
+  esports:    "ই-স্পোর্টস"
+};
+function pickSubcategoryFromUrl(url) {
+  if (!url) return null;
+  try {
+    const u = new URL(url);
+    const parts = u.pathname.split("/").filter(Boolean);
+    /* /sports/cricket/x → cricket
+       /video/sports/x   → ভিডিও (sports article যেটা video section-এ)
+       /sports/x         → null */
+    const sportsIdx = parts.indexOf("sports");
+    if (sportsIdx >= 0) {
+      const next = parts[sportsIdx + 1];
+      if (next && SLUG_TO_BN[next]) return SLUG_TO_BN[next];
+    }
+    if (parts[0] === "video" && parts.includes("sports")) return "ভিডিও";
+    return null;
+  } catch { return null; }
+}
+
 /* ===== Core ===== */
 async function fetchFeed() {
   const res = await fetch(FEED_URL, {
@@ -213,11 +253,11 @@ function titleExists(title) {
   return get("SELECT 1 AS x FROM news WHERE title = ? LIMIT 1", title).then(Boolean);
 }
 
-async function insertNews({ title, image, details, video }) {
+async function insertNews({ title, image, details, video, subcategory }) {
   const time = new Date().toLocaleString("en-US", { timeZone: "Asia/Dhaka" });
   const r = await run(
-    "INSERT INTO news (title, category, details, image, video, time) VALUES (?, ?, ?, ?, ?, ?)",
-    title, CATEGORY, details, image, video || null, time
+    "INSERT INTO news (title, category, subcategory, details, image, video, time) VALUES (?, ?, ?, ?, ?, ?, ?)",
+    title, CATEGORY, subcategory || null, details, image, video || null, time
   );
   return r.lastInsertRowid;
 }
@@ -246,7 +286,14 @@ export default async function handler(req, res) {
     const enriched = await Promise.all(
       items.map(async (it) => {
         const extra = await fetchArticleSummary(it.link);
-        return { ...it, description: extra.description, body: extra.body, image: extra.image || it.image, video: extra.video };
+        return {
+          ...it,
+          description: extra.description,
+          body:        extra.body,
+          image:       extra.image || it.image,
+          video:       extra.video,
+          subcategory: pickSubcategoryFromUrl(it.link)
+        };
       })
     );
 
@@ -261,19 +308,27 @@ export default async function handler(req, res) {
           ? `${it.description}\n\n— সূত্র: Prothom Alo (${it.link})`
           : `Prothom Alo থেকে সংগৃহীত।\nসূত্র: ${it.link}`;
 
-      const existing = await get("SELECT id, details, video FROM news WHERE title = ? LIMIT 1", it.title);
+      const existing = await get(
+        "SELECT id, details, video, subcategory FROM news WHERE title = ? LIMIT 1",
+        it.title
+      );
       if (existing) {
         /* যদি আগের details খুব ছোট হয় (শুধু og:description ছিল),
            তাহলে full body দিয়ে update করি — self-healing। */
         const needsDetails = (existing.details || "").length < 300 && it.body && it.body.length > 40;
         const needsVideo   = !existing.video && it.video;
-        if (needsDetails || needsVideo) {
+        const needsSub     = !existing.subcategory && it.subcategory;
+        if (needsDetails || needsVideo || needsSub) {
           const newDetails = needsDetails
             ? `${it.body}\n\n— সূত্র: Prothom Alo (${it.link})`.slice(0, 8000)
             : existing.details;
           const newVideo = needsVideo ? it.video : existing.video;
-          await run("UPDATE news SET details = ?, video = ? WHERE id = ?", newDetails, newVideo, existing.id);
-          added.push({ id: existing.id, title: it.title, action: "updated", video: !!newVideo });
+          const newSub   = needsSub   ? it.subcategory : existing.subcategory;
+          await run(
+            "UPDATE news SET details = ?, video = ?, subcategory = ? WHERE id = ?",
+            newDetails, newVideo, newSub, existing.id
+          );
+          added.push({ id: existing.id, title: it.title, action: "updated", video: !!newVideo, sub: !!newSub });
         } else {
           skipped.push({ id: existing.id, title: it.title, reason: "duplicate" });
         }
@@ -281,12 +336,13 @@ export default async function handler(req, res) {
       }
       try {
         const id = await insertNews({
-          title:   it.title,
-          image:   it.image,
-          details: details.slice(0, 8000), /* row safeguard */
-          video:   it.video
+          title:       it.title,
+          image:       it.image,
+          details:     details.slice(0, 8000), /* row safeguard */
+          video:       it.video,
+          subcategory: it.subcategory
         });
-        added.push({ id, title: it.title, bodyLen: it.body ? it.body.length : 0, video: !!it.video });
+        added.push({ id, title: it.title, bodyLen: it.body ? it.body.length : 0, video: !!it.video, sub: it.subcategory || null });
       } catch (err) {
         skipped.push({ title: it.title, reason: err.message });
       }

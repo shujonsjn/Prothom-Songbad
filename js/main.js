@@ -109,9 +109,10 @@
   }
 
   /* ===== Fetch from API ===== */
-  const apiUrl = activeCat && activeCat !== "all"
-    ? "/api/news?category=" + encodeURIComponent(activeCat)
-    : "/api/news";
+  const qp = new URLSearchParams();
+  if(activeCat && activeCat !== "all") qp.set("category", activeCat);
+  if(activeSub)                       qp.set("sub", activeSub);
+  const apiUrl = "/api/news" + (qp.toString() ? "?" + qp.toString() : "");
 
   fetch(apiUrl)
     .then(r => r.ok ? r.json() : Promise.reject(new Error("HTTP " + r.status)))

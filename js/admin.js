@@ -88,8 +88,10 @@
     form.append("details",  details.value);
     const imageUrlEl = document.getElementById("imageUrl");
     const videoEl    = document.getElementById("video");
+    const subcatEl   = document.getElementById("subcategory");
     if(imageUrlEl && imageUrlEl.value) form.append("imageUrl", imageUrlEl.value);
     if(videoEl    && videoEl.value)    form.append("video",    videoEl.value);
+    if(subcatEl   && subcatEl.value)   form.append("subcategory", subcatEl.value);
     if(img.files[0]) form.append("image", img.files[0]);
     if(isEdit) form.append("keepImage", "1");
 
@@ -243,11 +245,13 @@
       return;
     }
     rows.forEach(n => {
+      const sub = n.subcategory ? ` › ${esc(n.subcategory)}` : "";
+      const vid = n.video ? ` <span style="color:#c1131d">▶</span>` : "";
       list.innerHTML += `
         <div class="news-item">
           <div class="info">
-            <b>${esc(n.title)}</b>
-            <small>${esc(n.category)}</small>
+            <b>${esc(n.title)}${vid}</b>
+            <small>${esc(n.category)}${sub}</small>
           </div>
           <div class="actions">
             <button class="small-btn" onclick="edit(${n.id})">Edit</button>
@@ -265,8 +269,9 @@
         title.value    = n.title;
         category.value = n.category;
         details.value  = n.details;
-        document.getElementById("imageUrl").value = (n.image && !n.image.startsWith("data:")) ? n.image : "";
-        document.getElementById("video").value    = n.video || "";
+        document.getElementById("imageUrl").value  = (n.image && !n.image.startsWith("data:")) ? n.image : "";
+        document.getElementById("video").value     = n.video || "";
+        document.getElementById("subcategory").value = n.subcategory || "";
         editId         = id;
         img.value      = "";
         const card = document.querySelector(".card h3");
@@ -297,8 +302,9 @@
     title.value   = "";
     details.value = "";
     img.value     = "";
-    const iu = document.getElementById("imageUrl"); if(iu) iu.value = "";
-    const vv = document.getElementById("video");     if(vv) vv.value = "";
+    const iu = document.getElementById("imageUrl");     if(iu) iu.value = "";
+    const vv = document.getElementById("video");        if(vv) vv.value = "";
+    const ss = document.getElementById("subcategory");  if(ss) ss.value = "";
     editId        = null;
     const card = document.querySelector(".card h3");
     if(card) card.innerText = "Add / Edit News";

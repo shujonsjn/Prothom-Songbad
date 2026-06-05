@@ -47,6 +47,7 @@ let schemaReady = (async () => {
       id          INTEGER PRIMARY KEY AUTOINCREMENT,
       title       TEXT    NOT NULL,
       category    TEXT    NOT NULL,
+      subcategory TEXT,
       details     TEXT    NOT NULL,
       image       TEXT,
       video       TEXT,
@@ -59,8 +60,9 @@ let schemaReady = (async () => {
       name TEXT PRIMARY KEY
     )
   `);
-  /* পুরনো টেবিলে video কলাম নাও থাকতে পারে — যোগ করার চেষ্টা করি */
+  /* পুরনো টেবিলে column নাও থাকতে পারে — যোগ করার চেষ্টা করি */
   try { await db.exec("ALTER TABLE news ADD COLUMN video TEXT"); } catch {}
+  try { await db.exec("ALTER TABLE news ADD COLUMN subcategory TEXT"); } catch {}
   const existing = await db.prepare(
     "SELECT DISTINCT category FROM news WHERE category IS NOT NULL AND category != ''"
   ).all();
@@ -119,14 +121,21 @@ function fileToDataUrl(file) {
 app.get("/api/news", async (req, res) => {
   try {
     const category = (req.query.category || "").toString().trim();
-    let rows;
+    const subcategory = (req.query.sub || req.query.subcategory || "").toString().trim();
+    const where = [];
+    const args  = [];
     if (category && category !== "all") {
-      rows = await db.prepare(
-        "SELECT * FROM news WHERE category = ? ORDER BY id DESC"
-      ).all(category);
-    } else {
-      rows = await db.prepare("SELECT * FROM news ORDER BY id DESC").all();
+      where.push("category = ?");
+      args.push(category);
     }
+    if (subcategory) {
+      where.push("subcategory = ?");
+      args.push(subcategory);
+    }
+    const sql = where.length
+      ? `SELECT * FROM news WHERE ${where.join(" AND ")} ORDER BY id DESC`
+      : "SELECT * FROM news ORDER BY id DESC";
+    const rows = await db.prepare(sql).all(...args);
     res.json(rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -151,6 +160,22 @@ app.get("/api/categories", async (req, res) => {
       LEFT JOIN news n ON n.category = c.name
       GROUP BY c.name
       ORDER BY count DESC, c.name ASC
+    `).all();
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* category → sub-categories with count, news এ আছে এমনগুলো আগে */
+app.get("/api/subcategories", async (req, res) => {
+  try {
+    const rows = await db.prepare(`
+      SELECT category, subcategory, COUNT(*) AS count
+      FROM news
+      WHERE subcategory IS NOT NULL AND subcategory != ''
+      GROUP BY category, subcategory
+      ORDER BY category ASC, count DESC
     `).all();
     res.json(rows);
   } catch (err) {
@@ -197,7 +222,7 @@ app.get("/api/admin/check", requireAuth, (req, res) => {
 
 app.post("/api/news", requireAuth, upload.single("image"), async (req, res) => {
   try {
-    const { title, category, details, imageUrl, video } = req.body;
+    const { title, category, subcategory, details, imageUrl, video } = req.body;
     if (!title || !category || !details) {
       return res.status(400).json({ error: "title, category, details are required" });
     }
@@ -208,10 +233,11 @@ app.post("/api/news", requireAuth, upload.single("image"), async (req, res) => {
       image = imageUrl;
     }
     const v = (typeof video === "string" && video.trim()) ? video.trim() : null;
+    const sub = (typeof subcategory === "string" && subcategory.trim()) ? subcategory.trim() : null;
     const time = new Date().toLocaleString();
     const r = await db.prepare(
-      "INSERT INTO news (title, category, details, image, video, time) VALUES (?, ?, ?, ?, ?, ?)"
-    ).run(title, category, details, image, v, time);
+      "INSERT INTO news (title, category, subcategory, details, image, video, time) VALUES (?, ?, ?, ?, ?, ?, ?)"
+    ).run(title, category, sub, details, image, v, time);
     const row = await db.prepare("SELECT * FROM news WHERE id = ?").get(r.lastInsertRowid);
     res.status(201).json(row);
   } catch (err) {
@@ -224,7 +250,7 @@ app.put("/api/news/:id", requireAuth, upload.single("image"), async (req, res) =
     const existing = await db.prepare("SELECT * FROM news WHERE id = ?").get(req.params.id);
     if (!existing) return res.status(404).json({ error: "News not found" });
 
-    const { title, category, details, imageUrl, video } = req.body;
+    const { title, category, subcategory, details, imageUrl, video } = req.body;
     let image;
     if (req.file) {
       image = fileToDataUrl(req.file);
@@ -239,12 +265,19 @@ app.put("/api/news/:id", requireAuth, upload.single("image"), async (req, res) =
     } else {
       videoVal = existing.video;
     }
+    let subVal;
+    if (typeof subcategory === "string") {
+      subVal = subcategory.trim() ? subcategory.trim() : null;
+    } else {
+      subVal = existing.subcategory;
+    }
 
     await db.prepare(
-      "UPDATE news SET title = ?, category = ?, details = ?, image = ?, video = ?, time = ? WHERE id = ?"
+      "UPDATE news SET title = ?, category = ?, subcategory = ?, details = ?, image = ?, video = ?, time = ? WHERE id = ?"
     ).run(
       title    ?? existing.title,
       category ?? existing.category,
+      subVal,
       details  ?? existing.details,
       image,
       videoVal,
