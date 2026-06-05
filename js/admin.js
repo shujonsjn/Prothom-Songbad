@@ -77,7 +77,7 @@
     }
 
     const isEdit = editId !== null;
-    if(!isEdit && !img.files[0]){
+    if(!isEdit && !img.files[0] && !document.getElementById("imageUrl").value){
       alert("Image required");
       return;
     }
@@ -86,6 +86,10 @@
     form.append("title",    title.value);
     form.append("category", category.value);
     form.append("details",  details.value);
+    const imageUrlEl = document.getElementById("imageUrl");
+    const videoEl    = document.getElementById("video");
+    if(imageUrlEl && imageUrlEl.value) form.append("imageUrl", imageUrlEl.value);
+    if(videoEl    && videoEl.value)    form.append("video",    videoEl.value);
     if(img.files[0]) form.append("image", img.files[0]);
     if(isEdit) form.append("keepImage", "1");
 
@@ -261,6 +265,8 @@
         title.value    = n.title;
         category.value = n.category;
         details.value  = n.details;
+        document.getElementById("imageUrl").value = (n.image && !n.image.startsWith("data:")) ? n.image : "";
+        document.getElementById("video").value    = n.video || "";
         editId         = id;
         img.value      = "";
         const card = document.querySelector(".card h3");
@@ -291,6 +297,8 @@
     title.value   = "";
     details.value = "";
     img.value     = "";
+    const iu = document.getElementById("imageUrl"); if(iu) iu.value = "";
+    const vv = document.getElementById("video");     if(vv) vv.value = "";
     editId        = null;
     const card = document.querySelector(".card h3");
     if(card) card.innerText = "Add / Edit News";

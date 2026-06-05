@@ -49,6 +49,7 @@ let schemaReady = (async () => {
       category    TEXT    NOT NULL,
       details     TEXT    NOT NULL,
       image       TEXT,
+      video       TEXT,
       time        TEXT    NOT NULL,
       created_at  DATETIME DEFAULT CURRENT_TIMESTAMP
     )
@@ -58,6 +59,8 @@ let schemaReady = (async () => {
       name TEXT PRIMARY KEY
     )
   `);
+  /* পুরনো টেবিলে video কলাম নাও থাকতে পারে — যোগ করার চেষ্টা করি */
+  try { await db.exec("ALTER TABLE news ADD COLUMN video TEXT"); } catch {}
   const existing = await db.prepare(
     "SELECT DISTINCT category FROM news WHERE category IS NOT NULL AND category != ''"
   ).all();
@@ -194,7 +197,7 @@ app.get("/api/admin/check", requireAuth, (req, res) => {
 
 app.post("/api/news", requireAuth, upload.single("image"), async (req, res) => {
   try {
-    const { title, category, details, imageUrl } = req.body;
+    const { title, category, details, imageUrl, video } = req.body;
     if (!title || !category || !details) {
       return res.status(400).json({ error: "title, category, details are required" });
     }
@@ -204,10 +207,11 @@ app.post("/api/news", requireAuth, upload.single("image"), async (req, res) => {
     } else if (imageUrl && /^https?:\/\//.test(imageUrl)) {
       image = imageUrl;
     }
+    const v = (typeof video === "string" && video.trim()) ? video.trim() : null;
     const time = new Date().toLocaleString();
     const r = await db.prepare(
-      "INSERT INTO news (title, category, details, image, time) VALUES (?, ?, ?, ?, ?)"
-    ).run(title, category, details, image, time);
+      "INSERT INTO news (title, category, details, image, video, time) VALUES (?, ?, ?, ?, ?, ?)"
+    ).run(title, category, details, image, v, time);
     const row = await db.prepare("SELECT * FROM news WHERE id = ?").get(r.lastInsertRowid);
     res.status(201).json(row);
   } catch (err) {
@@ -220,7 +224,7 @@ app.put("/api/news/:id", requireAuth, upload.single("image"), async (req, res) =
     const existing = await db.prepare("SELECT * FROM news WHERE id = ?").get(req.params.id);
     if (!existing) return res.status(404).json({ error: "News not found" });
 
-    const { title, category, details, imageUrl } = req.body;
+    const { title, category, details, imageUrl, video } = req.body;
     let image;
     if (req.file) {
       image = fileToDataUrl(req.file);
@@ -229,14 +233,21 @@ app.put("/api/news/:id", requireAuth, upload.single("image"), async (req, res) =
     } else {
       image = existing.image;
     }
+    let videoVal;
+    if (typeof video === "string") {
+      videoVal = video.trim() ? video.trim() : null;
+    } else {
+      videoVal = existing.video;
+    }
 
     await db.prepare(
-      "UPDATE news SET title = ?, category = ?, details = ?, image = ?, time = ? WHERE id = ?"
+      "UPDATE news SET title = ?, category = ?, details = ?, image = ?, video = ?, time = ? WHERE id = ?"
     ).run(
       title    ?? existing.title,
       category ?? existing.category,
       details  ?? existing.details,
       image,
+      videoVal,
       new Date().toLocaleString(),
       req.params.id
     );

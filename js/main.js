@@ -46,12 +46,13 @@
     }
 
     const hero = data[0];
+    const heroVid = hero.video ? `<span class="vid-badge">▶ ভিডিও</span>` : "";
     mainNews.innerHTML = `
       <div class="hero">
         <img src="${esc(hero.image)}" alt="">
         <div class="hero-content">
           <span class="eyebrow">Featured Story</span>
-          <h1 onclick="openNews(${hero.id})">${esc(hero.title)}</h1>
+          <h1 onclick="openNews(${hero.id})">${esc(hero.title)}${heroVid}</h1>
           <p>${esc((hero.details || "").slice(0,250))}...</p>
         </div>
       </div>`;
@@ -61,11 +62,12 @@
       const grid = document.getElementById("grid");
       for(let i = 1; i < data.length; i++){
         const n = data[i];
+        const nv = n.video ? `<span class="vid-badge">▶</span>` : "";
         grid.innerHTML += `
           <div class="news">
             <img src="${esc(n.image)}" alt="">
             <div class="news-content">
-              <h2 onclick="openNews(${n.id})">${esc(n.title)}</h2>
+              <h2 onclick="openNews(${n.id})">${esc(n.title)} ${nv}</h2>
               <p>${esc((n.details || "").slice(0,120))}...</p>
             </div>
           </div>`;
@@ -78,10 +80,11 @@
     if(!sideNews) return;
     sideNews.innerHTML = "";
     data.slice(0,6).forEach(n => {
+      const sv = n.video ? `<span class="vid-badge">▶</span>` : "";
       sideNews.innerHTML += `
         <div class="side-news" onclick="openNews(${n.id})">
           <img src="${esc(n.image)}" alt="">
-          <div class="side-title">${esc(n.title)}</div>
+          <div class="side-title">${esc(n.title)} ${sv}</div>
         </div>`;
     });
   }

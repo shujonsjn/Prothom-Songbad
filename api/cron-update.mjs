@@ -18,6 +18,21 @@ const client = tursoUrl
   ? createClient({ url: tursoUrl, authToken: tursoToken })
   : createClient({ url: "file:./data.db" });
 
+/* Schema init (cron আগে চললে video কলাম add করি) */
+await client.execute(`
+  CREATE TABLE IF NOT EXISTS news (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    title       TEXT    NOT NULL,
+    category    TEXT    NOT NULL,
+    details     TEXT    NOT NULL,
+    image       TEXT,
+    video       TEXT,
+    time        TEXT    NOT NULL,
+    created_at  DATETIME DEFAULT CURRENT_TIMESTAMP
+  )
+`).catch(() => {});
+try { await client.execute("ALTER TABLE news ADD COLUMN video TEXT"); } catch {}
+
 async function all(sql, ...args) {
   const r = await client.execute({ sql, args });
   return r.rows || [];
@@ -110,6 +125,41 @@ function pickArticleBody(html) {
   return raw;
 }
 
+/* Extract a video URL from the article page.
+   Prothom Alo typically uses YouTube embeds via `VideoObject.embedUrl`. */
+function pickVideoUrl(html) {
+  /* 1. JSON-LD: VideoObject.embedUrl */
+  const re1 = /"@type"\s*:\s*"VideoObject"[\s\S]*?"embedUrl"\s*:\s*"([^"]+)"/;
+  const m1 = html.match(re1);
+  if (m1) return m1[1];
+  /* 2. <video src="…"> */
+  const re2 = /<video[^>]*\ssrc=["']([^"']+)["']/i;
+  const m2 = html.match(re2);
+  if (m2) return m2[1];
+  /* 3. <iframe src="…youtube…"> */
+  const re3 = /<iframe[^>]*\ssrc=["']([^"']*(?:youtube\.com|youtu\.be)[^"']*)["']/i;
+  const m3 = html.match(re3);
+  if (m3) return m3[1];
+  /* 4. JSON-LD: VideoObject.contentUrl */
+  const re4 = /"@type"\s*:\s*"VideoObject"[\s\S]*?"contentUrl"\s*:\s*"([^"]+)"/;
+  const m4 = html.match(re4);
+  if (m4) return m4[1];
+  return null;
+}
+
+/* সাধারণ watch/share URL → embed URL */
+function toEmbedUrl(url) {
+  if (!url) return null;
+  if (/youtube\.com\/embed\//.test(url) || /player\.vimeo\.com\//.test(url)) return url;
+  let m = url.match(/youtube\.com\/watch\?v=([\w-]{6,})/);
+  if (m) return `https://www.youtube.com/embed/${m[1]}`;
+  m = url.match(/youtu\.be\/([\w-]{6,})/);
+  if (m) return `https://www.youtube.com/embed/${m[1]}`;
+  m = url.match(/vimeo\.com\/(\d+)/);
+  if (m) return `https://player.vimeo.com/video/${m[1]}`;
+  return url; /* raw .mp4 / .m3u8 — ব্রাউজারই play করবে */
+}
+
 /* ===== Core ===== */
 async function fetchFeed() {
   const res = await fetch(FEED_URL, {
@@ -144,15 +194,16 @@ async function fetchArticleSummary(url) {
       headers: { "User-Agent": UA, Accept: "text/html" },
       redirect: "follow"
     });
-    if (!res.ok) return { description: null, body: null, image: null };
+    if (!res.ok) return { description: null, body: null, image: null, video: null };
     const html = await res.text();
     return {
       description: pickMeta(html, "og:description") || pickMeta(html, "twitter:description") || pickMeta(html, "description"),
       body:        pickArticleBody(html),
-      image:       pickMeta(html, "og:image")       || pickMeta(html, "twitter:image")
+      image:       pickMeta(html, "og:image")       || pickMeta(html, "twitter:image"),
+      video:       toEmbedUrl(pickVideoUrl(html))
     };
   } catch {
-    return { description: null, body: null, image: null };
+    return { description: null, body: null, image: null, video: null };
   }
 }
 
@@ -160,11 +211,11 @@ function titleExists(title) {
   return get("SELECT 1 AS x FROM news WHERE title = ? LIMIT 1", title).then(Boolean);
 }
 
-async function insertNews({ title, image, details }) {
+async function insertNews({ title, image, details, video }) {
   const time = new Date().toLocaleString("en-US", { timeZone: "Asia/Dhaka" });
   const r = await run(
-    "INSERT INTO news (title, category, details, image, time) VALUES (?, ?, ?, ?, ?)",
-    title, CATEGORY, details, image, time
+    "INSERT INTO news (title, category, details, image, video, time) VALUES (?, ?, ?, ?, ?, ?)",
+    title, CATEGORY, details, image, video || null, time
   );
   return r.lastInsertRowid;
 }
@@ -193,7 +244,7 @@ export default async function handler(req, res) {
     const enriched = await Promise.all(
       items.map(async (it) => {
         const extra = await fetchArticleSummary(it.link);
-        return { ...it, description: extra.description, body: extra.body, image: extra.image || it.image };
+        return { ...it, description: extra.description, body: extra.body, image: extra.image || it.image, video: extra.video };
       })
     );
 
@@ -208,14 +259,19 @@ export default async function handler(req, res) {
           ? `${it.description}\n\n— সূত্র: Prothom Alo (${it.link})`
           : `Prothom Alo থেকে সংগৃহীত।\nসূত্র: ${it.link}`;
 
-      const existing = await get("SELECT id, details FROM news WHERE title = ? LIMIT 1", it.title);
+      const existing = await get("SELECT id, details, video FROM news WHERE title = ? LIMIT 1", it.title);
       if (existing) {
         /* যদি আগের details খুব ছোট হয় (শুধু og:description ছিল),
            তাহলে full body দিয়ে update করি — self-healing। */
-        if ((existing.details || "").length < 300 && it.body && it.body.length > 40) {
-          const newDetails = `${it.body}\n\n— সূত্র: Prothom Alo (${it.link})`.slice(0, 8000);
-          await run("UPDATE news SET details = ? WHERE id = ?", newDetails, existing.id);
-          added.push({ id: existing.id, title: it.title, action: "updated" });
+        const needsDetails = (existing.details || "").length < 300 && it.body && it.body.length > 40;
+        const needsVideo   = !existing.video && it.video;
+        if (needsDetails || needsVideo) {
+          const newDetails = needsDetails
+            ? `${it.body}\n\n— সূত্র: Prothom Alo (${it.link})`.slice(0, 8000)
+            : existing.details;
+          const newVideo = needsVideo ? it.video : existing.video;
+          await run("UPDATE news SET details = ?, video = ? WHERE id = ?", newDetails, newVideo, existing.id);
+          added.push({ id: existing.id, title: it.title, action: "updated", video: !!newVideo });
         } else {
           skipped.push({ id: existing.id, title: it.title, reason: "duplicate" });
         }
@@ -225,9 +281,10 @@ export default async function handler(req, res) {
         const id = await insertNews({
           title:   it.title,
           image:   it.image,
-          details: details.slice(0, 8000) /* row safeguard */
+          details: details.slice(0, 8000), /* row safeguard */
+          video:   it.video
         });
-        added.push({ id, title: it.title, bodyLen: it.body ? it.body.length : 0 });
+        added.push({ id, title: it.title, bodyLen: it.body ? it.body.length : 0, video: !!it.video });
       } catch (err) {
         skipped.push({ title: it.title, reason: err.message });
       }
