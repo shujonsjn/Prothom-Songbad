@@ -48,10 +48,10 @@
     const info = toEmbedInfo(url);
     if (!info) return;
 
-    if (info.type === "youtube") {
+    if (info.type === "youtube" || (info.type === "iframe" && /youtube\.com\/embed\//.test(info.src || url))) {
       /* Lazy-load pattern — Prothom Alo-এর মতো: প্রথমে poster + play বাটন,
          ক্লিক করলে iframe বসবে (তাই initial load দ্রুত হয়)। */
-      const vid = info.id;
+      const vid = info.id || (info.src && (info.src.match(/youtube\.com\/embed\/([\w-]{6,})/) || [])[1]);
       const poster = document.getElementById("img");
       const posterSrc = poster && poster.src ? poster.src : "";
       const placeholder = document.createElement("div");
@@ -78,13 +78,22 @@
         placeholder.replaceWith(iframe);
       }, { once: true });
       box.appendChild(placeholder);
-    } else if (info.type === "vimeo") {
+    } else if (info.type === "vimeo" || (info.type === "iframe" && /player\.vimeo\.com/.test(info.src || url))) {
+      const vid = info.id || (info.src && (info.src.match(/vimeo\.com\/video\/(\d+)/) || [])[1]);
       const iframe = document.createElement("iframe");
-      iframe.src = `https://player.vimeo.com/video/${info.id}?autoplay=1`;
+      iframe.src = `https://player.vimeo.com/video/${vid}?autoplay=1`;
       iframe.allow = "autoplay; fullscreen; picture-in-picture";
       iframe.allowFullscreen = true;
       iframe.setAttribute("frameborder", "0");
       iframe.title = "Vimeo video player";
+      box.appendChild(iframe);
+    } else if (info.type === "iframe") {
+      const iframe = document.createElement("iframe");
+      iframe.src = info.src;
+      iframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share";
+      iframe.allowFullscreen = true;
+      iframe.setAttribute("frameborder", "0");
+      iframe.title = "Video player";
       box.appendChild(iframe);
     } else {
       const v = document.createElement("video");
