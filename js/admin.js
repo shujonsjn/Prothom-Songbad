@@ -72,6 +72,41 @@
     p.value = "";
   };
 
+  /* ===== SIDEBAR MENU / SECTION SWITCHING ===== */
+  const sbLinks     = document.querySelectorAll(".sb-link[data-section]");
+  const sbSections  = document.querySelectorAll(".admin-section[data-section]");
+  const cntPostsEl  = document.getElementById("cntPosts");
+  const cntCatsEl   = document.getElementById("cntCats");
+  const cntSubsEl   = document.getElementById("cntSubs");
+
+  function showSection(name){
+    sbLinks.forEach(a => a.classList.toggle("active", a.getAttribute("data-section") === name));
+    sbSections.forEach(s => s.classList.toggle("active", s.getAttribute("data-section") === name));
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+  sbLinks.forEach(a => {
+    a.addEventListener("click", (e) => {
+      e.preventDefault();
+      const name = a.getAttribute("data-section");
+      if (name) showSection(name);
+    });
+  });
+
+  function refreshSidebarCounts(){
+    if(cntPostsEl) cntPostsEl.textContent = (list && list.children.length) || 0;
+    if(cntCatsEl)  cntCatsEl.textContent  = categoriesCache.length || 0;
+    if(cntSubsEl)  cntSubsEl.textContent  = (subCatsCache || []).length || 0;
+  }
+
+  /* sidebar-এ logged-in user name দেখাই */
+  const sbUserNameEl = document.getElementById("sbUserName");
+  const sbAvatarEl   = document.querySelector(".sb-avatar");
+  function setSidebarUser(name){
+    if(sbUserNameEl) sbUserNameEl.textContent = name || "admin";
+    if(sbAvatarEl)   sbAvatarEl.textContent   = (name || "A").charAt(0).toUpperCase();
+  }
+  setSidebarUser("admin");
+
   /* ===== SAVE / PUBLISH (create or update) ===== */
   window.save = function(){
     if(!title.value || !category.value || !details.value){
@@ -125,6 +160,7 @@
       .then(rows => {
         if(!rows) return;
         render(rows);
+        refreshSidebarCounts();
       })
       .catch(err => alert("Load failed: " + err.message));
 
@@ -147,6 +183,7 @@
         if(typeof renderSubCatParent === "function") renderSubCatParent();
         /* category select refresh হলে form-এর sub-dropdown আপডেট করি */
         if(typeof renderSubcategorySelect === "function") renderSubcategorySelect();
+        refreshSidebarCounts();
       })
       .catch(err => console.error("Category load failed:", err));
   }
@@ -258,6 +295,7 @@
         renderSubCatParent();
         renderSubCatList();
         renderSubcategorySelect(); /* form-এর dropdown আপডেট */
+        refreshSidebarCounts();
       })
       .catch(() => {
         if(subCatList) subCatList.innerHTML = `<div class="empty" style="font-size:14px;padding:20px;">লোড করা যাচ্ছে না</div>`;

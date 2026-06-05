@@ -38,58 +38,116 @@
     <div class="tagline">Editorial Dashboard · <a href="index.html" style="color:#0a0a0a;text-decoration:underline;margin-right:12px;">Home</a>· <a href="#" onclick="logout();return false;" style="color:#0a0a0a;text-decoration:underline;">Logout</a></div>
   </div>
 
-  <div class="card">
-    <h3>Add / Edit News</h3>
+  <div class="admin-layout">
 
-    <input id="title" placeholder="Title">
-    <select id="category"></select>
+    <!-- LEFT SIDEBAR — menu -->
+    <aside class="admin-sidebar">
+      <div class="sb-user">
+        <div class="sb-avatar">A</div>
+        <div class="sb-user-info">
+          <b id="sbUserName">admin</b>
+          <small>Editor</small>
+        </div>
+      </div>
 
-    <div style="display:flex;gap:8px;align-items:stretch;margin:0;">
-      <select id="subcategory" style="flex:1;margin:0;">
-        <option value="">— Sub-category (optional) —</option>
-      </select>
-      <button type="button" id="addSubInline" style="width:auto;padding:0 16px;margin:0;background:#c1131d;color:#fff;border:none;font-size:13px;letter-spacing:.04em;" title="এই category-তে নতুন sub যোগ করুন">+ নতুন sub</button>
-    </div>
+      <nav class="sb-menu">
+        <a href="#" class="sb-link active" data-section="posts">
+          <span class="sb-icon">📰</span>
+          <span class="sb-label">Posts / News</span>
+          <span class="sb-count" id="cntPosts">–</span>
+        </a>
+        <a href="#" class="sb-link" data-section="categories">
+          <span class="sb-icon">📁</span>
+          <span class="sb-label">Categories</span>
+          <span class="sb-count" id="cntCats">–</span>
+        </a>
+        <a href="#" class="sb-link" data-section="subcategories">
+          <span class="sb-icon">🏷️</span>
+          <span class="sb-label">Sub-Categories</span>
+          <span class="sb-count" id="cntSubs">–</span>
+        </a>
+        <a href="index.html" class="sb-link sb-external">
+          <span class="sb-icon">🌐</span>
+          <span class="sb-label">View Site</span>
+        </a>
+        <a href="#" class="sb-link sb-logout" onclick="logout();return false;">
+          <span class="sb-icon">🚪</span>
+          <span class="sb-label">Logout</span>
+        </a>
+      </nav>
 
-    <textarea id="details" placeholder="Details"></textarea>
-    <input type="file" id="img">
-    <input id="imageUrl" placeholder="Image URL (optional)">
-    <input id="video" placeholder="Video URL — YouTube/Vimeo embed or .mp4 (optional)">
+      <div class="sb-footer">
+        <small>v1.0 · প্রথম সংবাদ</small>
+      </div>
+    </aside>
 
-    <button onclick="save()">Publish</button>
-  </div>
+    <!-- RIGHT CONTENT — section details -->
+    <main class="admin-main">
 
-  <h3 class="section-title">All Published Stories</h3>
-  <div id="list"></div>
+      <!-- ===== POSTS SECTION ===== -->
+      <section class="admin-section active" data-section="posts">
+        <div class="card">
+          <h3 id="formCardTitle">Add / Edit News</h3>
 
-  <h3 class="section-title">Manage Categories</h3>
-  <div class="card">
-    <p style="font-size:13px;color:#6b6b6b;letter-spacing:.05em;margin-bottom:14px;">
-      নতুন ক্যাটাগরি যোগ করুন অথবা অপ্রয়োজনীয় ক্যাটাগরি মুছুন
-    </p>
+          <input id="title" placeholder="Title">
+          <select id="category"></select>
 
-    <div style="display:flex;gap:8px;align-items:flex-end;">
-      <input id="newCat" placeholder="নতুন ক্যাটাগরির নাম" style="flex:1;margin:0;">
-      <button onclick="addCategory()" style="width:auto;padding:10px 20px;margin:0;">Add</button>
-    </div>
+          <div style="display:flex;gap:8px;align-items:stretch;margin:0;">
+            <select id="subcategory" style="flex:1;margin:0;">
+              <option value="">— Sub-category (optional) —</option>
+            </select>
+            <button type="button" id="addSubInline" style="width:auto;padding:0 16px;margin:0;background:#c1131d;color:#fff;border:none;font-size:13px;letter-spacing:.04em;" title="এই category-তে নতুন sub যোগ করুন">+ নতুন sub</button>
+          </div>
 
-    <div id="catList" style="margin-top:18px;"></div>
-  </div>
+          <textarea id="details" placeholder="Details"></textarea>
+          <input type="file" id="img">
+          <input id="imageUrl" placeholder="Image URL (optional)">
+          <input id="video" placeholder="Video URL — YouTube/Vimeo embed or .mp4 (optional)">
 
-  <h3 class="section-title">Manage Sub-Categories <span style="font-size:12px;color:#888;font-weight:400;letter-spacing:0;">(mega menu-তে দেখায়)</span></h3>
-  <div class="card">
-    <p style="font-size:13px;color:#6b6b6b;letter-spacing:.05em;margin-bottom:14px;">
-      যেকোনো main category-র অধীনে sub-category যোগ করুন (যেমন: খেলা → ক্রিকেট)।
-      যোগ হলে mega menu-তে সাথে সাথে দেখাবে।
-    </p>
+          <button onclick="save()">Publish</button>
+        </div>
 
-    <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
-      <select id="subCatParent" style="flex:1;min-width:160px;margin:0;"></select>
-      <input id="subCatName" placeholder="নতুন sub-category নাম (যেমন: ক্রিকেট)" style="flex:2;min-width:200px;margin:0;">
-      <button onclick="addSubCategory()" style="width:auto;padding:10px 20px;margin:0;">Add</button>
-    </div>
+        <h3 class="section-title">All Published Stories</h3>
+        <div id="list"></div>
+      </section>
 
-    <div id="subCatList" style="margin-top:18px;"></div>
+      <!-- ===== CATEGORIES SECTION ===== -->
+      <section class="admin-section" data-section="categories">
+        <h3 class="section-title">Manage Categories</h3>
+        <div class="card">
+          <p style="font-size:13px;color:#6b6b6b;letter-spacing:.05em;margin-bottom:14px;">
+            নতুন ক্যাটাগরি যোগ করুন অথবা অপ্রয়োজনীয় ক্যাটাগরি মুছুন
+          </p>
+
+          <div style="display:flex;gap:8px;align-items:flex-end;">
+            <input id="newCat" placeholder="নতুন ক্যাটাগরির নাম" style="flex:1;margin:0;">
+            <button onclick="addCategory()" style="width:auto;padding:10px 20px;margin:0;">Add</button>
+          </div>
+
+          <div id="catList" style="margin-top:18px;"></div>
+        </div>
+      </section>
+
+      <!-- ===== SUB-CATEGORIES SECTION ===== -->
+      <section class="admin-section" data-section="subcategories">
+        <h3 class="section-title">Manage Sub-Categories <span style="font-size:12px;color:#888;font-weight:400;letter-spacing:0;">(mega menu-তে দেখায়)</span></h3>
+        <div class="card">
+          <p style="font-size:13px;color:#6b6b6b;letter-spacing:.05em;margin-bottom:14px;">
+            যেকোনো main category-র অধীনে sub-category যোগ করুন (যেমন: খেলা → ক্রিকেট)।
+            যোগ হলে mega menu-তে সাথে সাথে দেখাবে।
+          </p>
+
+          <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
+            <select id="subCatParent" style="flex:1;min-width:160px;margin:0;"></select>
+            <input id="subCatName" placeholder="নতুন sub-category নাম (যেমন: ক্রিকেট)" style="flex:2;min-width:200px;margin:0;">
+            <button onclick="addSubCategory()" style="width:auto;padding:10px 20px;margin:0;">Add</button>
+          </div>
+
+          <div id="subCatList" style="margin-top:18px;"></div>
+        </div>
+      </section>
+
+    </main>
   </div>
 
 </div>
