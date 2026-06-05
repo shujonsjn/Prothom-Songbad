@@ -61,7 +61,7 @@
 
   /* Then asynchronously try API; if it returns a different/richer
      list, republish so the mega menu re-renders. */
-  fetch("/api/subcategories")
+  fetch("/api/subcategories?t=" + Date.now(), { cache: "no-store" })
     .then(r => r.ok ? r.json() : Promise.reject(new Error("HTTP " + r.status)))
     .then(rows => {
       if (!Array.isArray(rows) || rows.length === 0) return;
