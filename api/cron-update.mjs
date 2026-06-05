@@ -1,10 +1,8 @@
-/* ==========================================================
-   api/cron-update.mjs — Vercel Cron Job
-   প্রতি ৬ ঘণ্টায় Prothom Alo এর sports section থেকে
-   ৫টি নতুন খবর Turso DB-তে যোগ করে।
-   Schedule: 0 */6 * * * (UTC) = প্রতি ছয় ঘণ্টায়
-   Auth: Authorization: Bearer ${CRON_SECRET}
-   ========================================================== */
+// api/cron-update.mjs — Vercel / GitHub Actions Cron Job
+// প্রতি ৬ ঘণ্টায় Prothom Alo এর sports section থেকে
+// ৫টি নতুন খবর Turso DB-তে যোগ করে।
+// Schedule: 0 star-slash-6 (UTC) = প্রতি ছয় ঘণ্টায়
+// Auth: ?secret=CRON_SECRET  বা  Authorization: Bearer CRON_SECRET
 
 import { createClient } from "@libsql/client";
 
