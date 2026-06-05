@@ -417,19 +417,12 @@ header.page-header .logo{
 
 .video-wrap{
   margin:24px 0;
-  border-radius:8px;
+  border-radius:0;
   overflow:hidden;
   background:#000;
-  box-shadow:0 4px 18px rgba(0,0,0,.18);
-}
-.video-label{
-  background:#b8001f;
-  color:#fff;
-  font-family:'Hind Siliguri',sans-serif;
-  font-weight:600;
-  padding:8px 14px;
-  font-size:14px;
-  letter-spacing:0.04em;
+  box-shadow:none;
+  position:relative;
+  width:100%;
 }
 .video-wrap iframe,
 .video-wrap video{
@@ -440,6 +433,43 @@ header.page-header .logo{
   background:#000;
 }
 .video-wrap video{aspect-ratio:auto;max-height:70vh}
+
+.yt-placeholder{
+  position:relative;
+  width:100%;
+  aspect-ratio:16/9;
+  background:#000 center/cover no-repeat #222;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  transition:filter .2s;
+}
+.yt-placeholder:hover{filter:brightness(1.1)}
+.yt-placeholder .yt-play{
+  background:transparent;
+  border:0;
+  padding:0;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  filter:drop-shadow(0 2px 8px rgba(0,0,0,.5));
+  transition:transform .15s;
+}
+.yt-placeholder .yt-play:hover{transform:scale(1.08)}
+.yt-placeholder .yt-credit{
+  position:absolute;
+  right:10px;
+  bottom:8px;
+  color:#fff;
+  font-size:12px;
+  font-family:Arial,sans-serif;
+  background:rgba(0,0,0,.6);
+  padding:3px 7px;
+  border-radius:3px;
+  letter-spacing:.04em;
+}
 
 .vid-badge{
   display:inline-block;
