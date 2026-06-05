@@ -1,6 +1,10 @@
 {
   "version": 2,
+  "crons": [
+    { "path": "/api/cron-update", "schedule": "0 */6 * * *" }
+  ],
   "routes": [
+    { "src": "/api/cron-update", "dest": "api/cron-update.mjs" },
     { "src": "/api/(.*)", "dest": "api/index.mjs" },
     { "src": "/(.*\\..*)", "dest": "/$1" },
     { "src": "/(.*)", "dest": "/$1" }
