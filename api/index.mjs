@@ -60,6 +60,15 @@ let schemaReady = (async () => {
       name TEXT PRIMARY KEY
     )
   `);
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS subcategories (
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      category   TEXT    NOT NULL,
+      name       TEXT    NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(category, name)
+    )
+  `);
   /* পুরনো টেবিলে column নাও থাকতে পারে — যোগ করার চেষ্টা করি */
   try { await db.exec("ALTER TABLE news ADD COLUMN video TEXT"); } catch {}
   try { await db.exec("ALTER TABLE news ADD COLUMN subcategory TEXT"); } catch {}
@@ -69,6 +78,42 @@ let schemaReady = (async () => {
   for (const r of existing) {
     if (r.category) {
       await db.prepare("INSERT OR IGNORE INTO categories (name) VALUES (?)").run(r.category);
+    }
+  }
+
+  /* প্রথমবার চললে hardcoded default sub-categories seed করি */
+  const subCount = await db.prepare("SELECT COUNT(*) AS c FROM subcategories").get();
+  if ((subCount?.c || 0) === 0 && process.env.SEED_SUBCATS !== "0") {
+    const defaults = {
+      "খেলা": [
+        "ক্রিকেট", "ফুটবল", "টেনিস", "জানা খেলা", "সাফখেলাস",
+        "সড়ক দৌড়", "কুইব", "সাত রং", "ভিডিও", "আর্কাইভ খেলা"
+      ],
+      "জাতীয়": [
+        "রাজনীতি", "সরকার", "সংসদ", "আইন-আদালত", "অপরাধ",
+        "শিক্ষা", "স্বাস্থ্য", "পরিবেশ"
+      ],
+      "আন্তর্জাতিক": [
+        "এশিয়া", "ইউরোপ", "আমেরিকা", "মধ্যপ্রাচ্য", "আফ্রিকা", "ওশেনিয়া"
+      ],
+      "বিনোদন": [
+        "চলচ্চিত্র", "গান", "নাটক", "সিরিজ", "টেলিভিশন",
+        "বলিউড", "হলিউড", "দক্ষিণী", "কোরীয়"
+      ],
+      "Binodon": [
+        "চলচ্চিত্র", "গান", "নাটক", "সিরিজ", "টেলিভিশন",
+        "বলিউড", "হলিউড", "দক্ষিণী", "কোরীয়"
+      ],
+      "প্রযুক্তি": [
+        "মোবাইল", "কম্পিউটার", "সফটওয়্যার", "গেমস", "ইন্টারনেট", "এআই"
+      ]
+    };
+    for (const [cat, names] of Object.entries(defaults)) {
+      for (const n of names) {
+        await db.prepare(
+          "INSERT OR IGNORE INTO subcategories (category, name) VALUES (?, ?)"
+        ).run(cat, n);
+      }
     }
   }
 })();
@@ -167,17 +212,71 @@ app.get("/api/categories", async (req, res) => {
   }
 });
 
-/* category → sub-categories with count, news এ আছে এমনগুলো আগে */
+/* subcategories: ?category=xxx দিলে ওই category-র সব sub;
+   ছাড়া দিলে সব (grouped)। Format: [{id, category, name, newsCount}] */
 app.get("/api/subcategories", async (req, res) => {
   try {
-    const rows = await db.prepare(`
-      SELECT category, subcategory, COUNT(*) AS count
-      FROM news
-      WHERE subcategory IS NOT NULL AND subcategory != ''
-      GROUP BY category, subcategory
-      ORDER BY category ASC, count DESC
-    `).all();
+    const cat = (req.query.category || "").toString().trim();
+    const sql = `
+      SELECT s.id, s.category, s.name,
+             (SELECT COUNT(*) FROM news n
+                WHERE n.category = s.category
+                  AND n.subcategory = s.name) AS newsCount
+      FROM subcategories s
+      ${cat ? "WHERE s.category = ?" : ""}
+      ORDER BY s.category ASC, s.id ASC
+    `;
+    const rows = cat
+      ? await db.prepare(sql).all(cat)
+      : await db.prepare(sql).all();
     res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post("/api/subcategories", requireAuth, async (req, res) => {
+  try {
+    const category = (req.body.category || "").toString().trim();
+    const name     = (req.body.name || "").toString().trim();
+    if (!category || !name) {
+      return res.status(400).json({ error: "category এবং name দুটোই দিতে হবে" });
+    }
+    if (name.length > 40) return res.status(400).json({ error: "name খুব বড় (max 40)" });
+    const catExists = await db.prepare("SELECT 1 FROM categories WHERE name = ?").get(category);
+    if (!catExists) return res.status(404).json({ error: `“${category}” ক্যাটাগরি নেই` });
+    try {
+      const r = await db.prepare(
+        "INSERT INTO subcategories (category, name) VALUES (?, ?)"
+      ).run(category, name);
+      const row = await db.prepare("SELECT * FROM subcategories WHERE id = ?").get(r.lastInsertRowid);
+      res.status(201).json(row);
+    } catch (e) {
+      if (String(e.message).includes("UNIQUE")) {
+        return res.status(409).json({ error: "এই sub-category আগে থেকেই আছে" });
+      }
+      throw e;
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete("/api/subcategories/:id", requireAuth, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!id) return res.status(400).json({ error: "Invalid id" });
+    const used = await db.prepare(
+      "SELECT COUNT(*) AS c FROM news WHERE subcategory = (SELECT name FROM subcategories WHERE id = ?) AND category = (SELECT category FROM subcategories WHERE id = ?)"
+    ).get(id, id);
+    if (used.c > 0) {
+      return res.status(409).json({
+        error: `এই sub-category তে ${used.c}টি সংবাদ আছে — আগে সেগুলো মুছুন`
+      });
+    }
+    const r = await db.prepare("DELETE FROM subcategories WHERE id = ?").run(id);
+    if (r.changes === 0) return res.status(404).json({ error: "Sub-category not found" });
+    res.json({ ok: true, id });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

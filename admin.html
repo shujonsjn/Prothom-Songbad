@@ -70,6 +70,22 @@
     <div id="catList" style="margin-top:18px;"></div>
   </div>
 
+  <h3 class="section-title">Manage Sub-Categories <span style="font-size:12px;color:#888;font-weight:400;letter-spacing:0;">(mega menu-তে দেখায়)</span></h3>
+  <div class="card">
+    <p style="font-size:13px;color:#6b6b6b;letter-spacing:.05em;margin-bottom:14px;">
+      যেকোনো main category-র অধীনে sub-category যোগ করুন (যেমন: খেলা → ক্রিকেট)।
+      যোগ হলে mega menu-তে সাথে সাথে দেখাবে।
+    </p>
+
+    <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
+      <select id="subCatParent" style="flex:1;min-width:160px;margin:0;"></select>
+      <input id="subCatName" placeholder="নতুন sub-category নাম (যেমন: ক্রিকেট)" style="flex:2;min-width:200px;margin:0;">
+      <button onclick="addSubCategory()" style="width:auto;padding:10px 20px;margin:0;">Add</button>
+    </div>
+
+    <div id="subCatList" style="margin-top:18px;"></div>
+  </div>
+
 </div>
 
 <script src="js/admin.js"></script>

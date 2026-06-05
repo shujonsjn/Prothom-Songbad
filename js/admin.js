@@ -126,6 +126,7 @@
       .catch(err => alert("Load failed: " + err.message));
 
     loadCategories();
+    loadSubCategories();
   }
 
   /* ===== LOAD CATEGORIES ===== */
@@ -140,6 +141,7 @@
         categoriesCache = rows || [];
         renderCategorySelect();
         renderCategoryList();
+        if(typeof renderSubCatParent === "function") renderSubCatParent();
       })
       .catch(err => console.error("Category load failed:", err));
   }
@@ -237,6 +239,133 @@
       })
       .catch(err => alert("Delete failed: " + err.message));
   }
+
+  /* ===== SUB-CATEGORY MANAGER ===== */
+  const subCatParent = document.getElementById("subCatParent");
+  const subCatName   = document.getElementById("subCatName");
+  const subCatList   = document.getElementById("subCatList");
+  let subCatsCache   = []; /* all subcategories grouped by parent */
+
+  function loadSubCategories(){
+    fetch("/api/subcategories", { headers: authHeader() })
+      .then(r => r.ok ? r.json() : [])
+      .then(rows => {
+        subCatsCache = rows || [];
+        renderSubCatParent();
+        renderSubCatList();
+      })
+      .catch(() => {
+        if(subCatList) subCatList.innerHTML = `<div class="empty" style="font-size:14px;padding:20px;">লোড করা যাচ্ছে না</div>`;
+      });
+  }
+
+  function renderSubCatParent(){
+    if(!subCatParent) return;
+    const prev = subCatParent.value;
+    subCatParent.innerHTML = "";
+    const seen = new Set();
+    for (const c of categoriesCache) {
+      if (!c.category || seen.has(c.category)) continue;
+      seen.add(c.category);
+      const opt = document.createElement("option");
+      opt.value = c.category;
+      opt.textContent = c.category;
+      subCatParent.appendChild(opt);
+    }
+    if(prev && seen.has(prev)) subCatParent.value = prev;
+  }
+
+  function renderSubCatList(){
+    if(!subCatList) return;
+    subCatList.innerHTML = "";
+    if(subCatsCache.length === 0){
+      subCatList.innerHTML = `<div class="empty" style="font-size:14px;padding:20px;">কোনো sub-category নেই — উপরে থেকে যোগ করুন</div>`;
+      return;
+    }
+    /* parent category অনুযায়ী group */
+    const grouped = {};
+    for (const s of subCatsCache) {
+      if (!grouped[s.category]) grouped[s.category] = [];
+      grouped[s.category].push(s);
+    }
+    for (const cat of Object.keys(grouped).sort()){
+      const block = document.createElement("div");
+      block.style.cssText = "margin-bottom:18px;padding:14px;background:#faf6ec;border:1px solid #e5dfd0;border-radius:6px;";
+      const head = document.createElement("div");
+      head.style.cssText = "font-weight:700;font-size:15px;margin-bottom:10px;color:#c1131d;letter-spacing:.04em;";
+      head.textContent = cat;
+      block.appendChild(head);
+
+      const tags = document.createElement("div");
+      tags.style.cssText = "display:flex;flex-wrap:wrap;gap:8px;";
+      grouped[cat].forEach(s => {
+        const tag = document.createElement("span");
+        tag.style.cssText = "display:inline-flex;align-items:center;gap:8px;padding:5px 10px;background:#fff;border:1px solid #0a0a0a;border-radius:999px;font-size:13px;font-family:'Hind Siliguri',sans-serif;";
+        const label = document.createElement("span");
+        label.textContent = s.name + (s.newsCount ? ` (${s.newsCount})` : "");
+        const x = document.createElement("button");
+        x.textContent = "✕";
+        x.title = "মুছুন";
+        x.style.cssText = "background:none;border:none;color:#c1131d;cursor:pointer;font-size:14px;line-height:1;padding:0;";
+        x.addEventListener("click", () => deleteSubCategory(s.id, s.name));
+        tag.appendChild(label);
+        tag.appendChild(x);
+        tags.appendChild(tag);
+      });
+      block.appendChild(tags);
+      subCatList.appendChild(block);
+    }
+  }
+
+  window.addSubCategory = function(){
+    if(!subCatParent.value){ alert("একটা parent category বাছাই করুন"); return; }
+    const name = (subCatName.value || "").trim();
+    if(!name){ alert("sub-category নাম দিন"); return; }
+    fetch("/api/subcategories", {
+      method: "POST",
+      headers: { ...authHeader(), "Content-Type": "application/json" },
+      body: JSON.stringify({ category: subCatParent.value, name })
+    })
+      .then(async r => {
+        const data = await r.json().catch(() => ({}));
+        if(r.status === 401){ alert("Session expired."); logout(); return null; }
+        if(!r.ok) throw new Error(data.error || "HTTP " + r.status);
+        return data;
+      })
+      .then(res => {
+        if(!res) return;
+        subCatName.value = "";
+        loadSubCategories();
+      })
+      .catch(err => alert("Add failed: " + err.message));
+  };
+
+  function deleteSubCategory(id, name){
+    if(!confirm(`“${name}” sub-category মুছে ফেলতে চান?`)) return;
+    fetch("/api/subcategories/" + id, {
+      method: "DELETE",
+      headers: authHeader()
+    })
+      .then(async r => {
+        const data = await r.json().catch(() => ({}));
+        if(r.status === 401){ alert("Session expired."); logout(); return null; }
+        if(!r.ok) throw new Error(data.error || "HTTP " + r.status);
+        return data;
+      })
+      .then(res => {
+        if(!res) return;
+        loadSubCategories();
+      })
+      .catch(err => alert("Delete failed: " + err.message));
+  }
+
+  /* Refresh sub-cat parent dropdown when categories change */
+  const _origLoadCategories = loadCategories;
+  loadCategories = function(){
+    return _origLoadCategories().then(() => {
+      if(typeof renderSubCatParent === "function") renderSubCatParent();
+    });
+  };
 
   function render(rows){
     list.innerHTML = "";

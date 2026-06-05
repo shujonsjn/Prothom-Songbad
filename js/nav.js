@@ -49,6 +49,11 @@
     dd.classList.add("open");
     currentOpen = cat;
   }
+
+  /* When async subcategory data arrives, re-render */
+  window.addEventListener("subcategories:ready", () => {
+    if(currentOpen) openPanel(currentOpen);
+  });
   function closePanel(){
     const dd = document.getElementById("navDropdown");
     if(!dd) return;
