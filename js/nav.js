@@ -105,6 +105,7 @@
 
   fetch("/api/categories")
     .then(r => r.ok ? r.json() : [])
+    .then(arr => (arr || []).filter(c => c.count > 0))
     .then(render)
     .catch(() => {
       const menu = document.getElementById("navMenu");
