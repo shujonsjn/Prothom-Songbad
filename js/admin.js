@@ -362,9 +362,11 @@
   /* Refresh sub-cat parent dropdown when categories change */
   const _origLoadCategories = loadCategories;
   loadCategories = function(){
-    return _origLoadCategories().then(() => {
-      if(typeof renderSubCatParent === "function") renderSubCatParent();
-    });
+    _origLoadCategories();
+    /* এই wrapper loadCategories এর return Promise ধরে না;
+       original function explicit return করে না, তাই .then() চেইন করা যায় না।
+       renderSubCatParent আগে থেকেই original এ কল হয়, তাই এখানে আর
+       কিছু করার দরকার নেই। */
   };
 
   function render(rows){
