@@ -43,6 +43,9 @@
 
   function renderVideo(url) {
     if (!url) return;
+    /* Video থাকলে poster image লুকিয়ে দিই — video-ই media হবে */
+    const img = document.getElementById("img");
+    if (img) img.style.display = "none";
     const wrap = document.getElementById("videoWrap");
     const box  = document.getElementById("videoContainer");
     const info = toEmbedInfo(url);
@@ -52,14 +55,11 @@
       /* Lazy-load pattern — Prothom Alo-এর মতো: প্রথমে poster + play বাটন,
          ক্লিক করলে iframe বসবে (তাই initial load দ্রুত হয়)। */
       const vid = info.id || (info.src && (info.src.match(/youtube\.com\/embed\/([\w-]{6,})/) || [])[1]);
-      const poster = document.getElementById("img");
-      const posterSrc = poster && poster.src ? poster.src : "";
       const placeholder = document.createElement("div");
       placeholder.className = "yt-placeholder";
       placeholder.setAttribute("data-vid", vid);
-      if (posterSrc) {
-        placeholder.style.backgroundImage = `url("${posterSrc}")`;
-      }
+      /* YouTube-এর maxresdefault thumbnail ব্যবহার করি */
+      placeholder.style.backgroundImage = `url("https://i.ytimg.com/vi/${vid}/maxresdefault.jpg"), url("https://i.ytimg.com/vi/${vid}/hqdefault.jpg")`;
       placeholder.innerHTML = `
         <button class="yt-play" type="button" aria-label="ভিডিও চালু করুন">
           <svg viewBox="0 0 68 48" width="68" height="48">
