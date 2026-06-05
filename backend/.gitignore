@@ -3,6 +3,9 @@ data.db
 data.db-journal
 data.db-wal
 data.db-shm
+auth
+auth-wal
+auth-shm
 uploads/
 *.log
 .env
@@ -13,3 +16,5 @@ Thumbs.db
 .vscode/
 .idea/
 *.swp
+
+.playwright-mcp/

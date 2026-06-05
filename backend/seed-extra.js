@@ -1,9 +1,10 @@
 /* ==========================================================
    SEED-EXTRA.JS — Add bulk news items to existing categories
    Run once: node seed-extra.js
+   Uses libSQL (works against local file or Turso if env vars set)
    ========================================================== */
 
-import db from "./db.js";
+import db, { ready } from "./db.js";
 
 const now = () => new Date().toLocaleString();
 
@@ -21,6 +22,9 @@ const seeds = [
   { category: "জাতীয়", title: "কৃষকদের জন্য বিশেষ ভর্তুকি প্যাকেজ",
     details: "কৃষি খাতকে আরও শক্তিশালী করতে সরকার কৃষকদের জন্য নতুন ভর্তুকি প্যাকেজ ঘোষণা করেছে, যেখানে সার, বীজ ও কৃষি যন্ত্রপাতির ওপর বিশেষ ছাড় দেওয়া হবে।",
     image: "https://images.unsplash.com/photo-1574943320219-553eb213f72d?w=900" },
+  { category: "জাতীয়", title: "পর্যটন শিল্পে নতুন সম্ভাবনা",
+    details: "দেশের পর্যটন শিল্পকে আরও বিকশিত করতে সরকার নতুন পর্যটন মানচিত্র তৈরি করেছে এবং বিদেশি পর্যটকদের জন্য বিশেষ ভিসা সুবিধা চালু করতে যাচ্ছে।",
+    image: "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=900" },
 
   /* ===== খেলা ===== */
   { category: "খেলা", title: "বাংলাদেশ ক্রিকেটে ঐতিহাসিক জয়",
@@ -35,6 +39,9 @@ const seeds = [
   { category: "খেলা", title: "অলিম্পিকে বাংলাদেশের প্রতিনিধি দল",
     details: "আসন্ন অলিম্পিক গেমসের জন্য বাংলাদেশের প্রতিনিধি দল চূড়ান্ত হয়েছে, যেখানে পাঁচটি ডিসিপ্লিনে খেলোয়াড়রা অংশ নেবেন।",
     image: "https://images.unsplash.com/photo-1461896836934-bd45ba8b0e28?w=900" },
+  { category: "খেলা", title: "হকিতে ঐতিহাসিক পদক জয়",
+    details: "আন্তর্জাতিক হকি টুর্নামেন্টে বাংলাদেশ দল শক্তিশালী প্রতিপক্ষকে হারিয়ে স্বর্ণপদক জিতে নতুন ইতিহাস সৃষ্টি করেছে।",
+    image: "https://images.unsplash.com/photo-1565992441121-4367c2967103?w=900" },
 
   /* ===== বিনোদন ===== */
   { category: "বিনোদন", title: "জাতীয় চলচ্চিত্র পুরস্কার ঘোষণা",
@@ -66,6 +73,9 @@ const seeds = [
   { category: "আন্তর্জাতিক", title: "বিশ্ব স্বাস্থ্য সংস্থার নতুন সতর্কতা",
     details: "বিশ্ব স্বাস্থ্য সংস্থা একটি নতুন সংক্রামক রোগ নিয়ে বৈশ্বিক সতর্কতা জারি করেছে এবং সদস্য রাষ্ট্রগুলোকে প্রস্তুত থাকার আহ্বান জানিয়েছে।",
     image: "https://images.unsplash.com/photo-1584036561566-baf8f5f1b144?w=900" },
+  { category: "আন্তর্জাতিক", title: "জাতিসংঘে শান্তি আলোচনা শুরু",
+    details: "বিশ্বের দুটি প্রভাবশালী দেশের মধ্যে দীর্ঘদিনের উত্তেজনা নিরসনে জাতিসংঘের মধ্যস্থতায় নতুন শান্তি আলোচনা শুরু হয়েছে, যা আঞ্চলিক স্থিতিশীলতায় গুরুত্বপূর্ণ ভূমিকা রাখবে।",
+    image: "https://images.unsplash.com/photo-1521295121783-8a321d551ad2?w=900" },
 
   /* ===== প্রযুক্তি ===== */
   { category: "প্রযুক্তি", title: "দেশে প্রথম AI গবেষণা কেন্দ্র চালু",
@@ -96,26 +106,28 @@ const seeds = [
     image: "https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?w=900" },
   { category: "Binodon", title: "নাচের উৎসবে তরুণ শিল্পীদের উপস্থিতি",
     details: "রাজধানীর নাচের উৎসবে এবার বিপুল সংখ্যক তরুণ শিল্পী অংশ নিয়েছেন, যারা দেশীয় ঐতিহ্যের সাথে আধুনিক ধারার সংমিশ্রণ ঘটিয়েছেন।",
-    image: "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=900" }
+    image: "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=900" },
+  { category: "Binodon", title: "পুরনো চলচ্চিত্রের পুনরুদ্ধার প্রকল্প",
+    details: "দেশের প্রত্নতাত্ত্বিক গুরুত্বসম্পন্ন পুরনো চলচ্চিত্রগুলো ডিজিটাল প্রযুক্তির মাধ্যমে পুনরুদ্ধার করে নতুন প্রজন্মের জন্য উপলব্ধ করা হচ্ছে।",
+    image: "https://images.unsplash.com/photo-1485846234645-a62644f84728?w=900" }
 ];
 
-const insertNews = db.prepare(
-  "INSERT INTO news (title, category, details, image, time) VALUES (?, ?, ?, ?, ?)"
-);
-const insertCat = db.prepare("INSERT OR IGNORE INTO categories (name) VALUES (?)");
-const getCount  = db.prepare("SELECT COUNT(*) AS c FROM news WHERE category = ?");
+await ready();
 
 let added = 0;
 for (const s of seeds) {
-  insertCat.run(s.category);
-  const cur = getCount.get(s.category).c;
+  await db.prepare("INSERT OR IGNORE INTO categories (name) VALUES (?)").run(s.category);
+  const cur = (await db.prepare("SELECT COUNT(*) AS c FROM news WHERE category = ?").get(s.category)).c;
   if (cur >= 5) {
     console.log(`SKIP (${cur}/5): ${s.category} - ${s.title}`);
     continue;
   }
-  insertNews.run(s.title, s.category, s.details, s.image, now());
+  await db.prepare(
+    "INSERT INTO news (title, category, details, image, time) VALUES (?, ?, ?, ?, ?)"
+  ).run(s.title, s.category, s.details, s.image, now());
   added++;
   console.log(`ADDED (${cur + 1}/5): ${s.category} - ${s.title}`);
 }
 
 console.log(`\n=== Done. Inserted ${added} new news items. ===`);
+process.exit(0);
