@@ -76,6 +76,40 @@ function pickMeta(html, prop) {
   return m ? decodeXmlEntities(m[1]) : null;
 }
 
+/* Extract the full article body from the JSON-LD <script> block.
+   Prothom Alo embeds the full text as `articleBody` in escaped HTML. */
+function pickArticleBody(html) {
+  const re = /"articleBody"\s*:\s*"((?:[^"\\]|\\.)*)"/;
+  const m = html.match(re);
+  if (!m) return null;
+  let raw = m[1];
+  /* JSON string → real text (only the escapes we expect) */
+  raw = raw
+    .replace(/\\"/g, '"')
+    .replace(/\\n/g, "\n")
+    .replace(/\\r/g, "")
+    .replace(/\\t/g, " ");
+  /* unescape HTML entities */
+  raw = raw
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(parseInt(n, 10)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCharCode(parseInt(n, 16)));
+  /* strip tags, keep paragraph breaks */
+  raw = raw
+    .replace(/<\s*br\s*\/?>/gi, "\n")
+    .replace(/<\/p>/gi, "\n\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+  return raw;
+}
+
 /* ===== Core ===== */
 async function fetchFeed() {
   const res = await fetch(FEED_URL, {
@@ -110,14 +144,15 @@ async function fetchArticleSummary(url) {
       headers: { "User-Agent": UA, Accept: "text/html" },
       redirect: "follow"
     });
-    if (!res.ok) return { description: null, image: null };
+    if (!res.ok) return { description: null, body: null, image: null };
     const html = await res.text();
     return {
       description: pickMeta(html, "og:description") || pickMeta(html, "twitter:description") || pickMeta(html, "description"),
+      body:        pickArticleBody(html),
       image:       pickMeta(html, "og:image")       || pickMeta(html, "twitter:image")
     };
   } catch {
-    return { description: null, image: null };
+    return { description: null, body: null, image: null };
   }
 }
 
@@ -158,16 +193,20 @@ export default async function handler(req, res) {
     const enriched = await Promise.all(
       items.map(async (it) => {
         const extra = await fetchArticleSummary(it.link);
-        return { ...it, description: extra.description, image: extra.image || it.image };
+        return { ...it, description: extra.description, body: extra.body, image: extra.image || it.image };
       })
     );
 
     const added = [];
     const skipped = [];
     for (const it of enriched) {
-      const details = it.description
-        ? `${it.description}\n\nসূত্র: ${it.link}`
-        : `Prothom Alo থেকে সংগৃহীত।\nসূত্র: ${it.link}`;
+      /* পূর্ণ article body পাওয়া গেলে সেটাই details হিসেবে রাখি,
+         না পারলে og:description, না পারলে fallback বাক্য। */
+      const details = (it.body && it.body.length > 40)
+        ? `${it.body}\n\n— সূত্র: Prothom Alo (${it.link})`
+        : it.description
+          ? `${it.description}\n\n— সূত্র: Prothom Alo (${it.link})`
+          : `Prothom Alo থেকে সংগৃহীত।\nসূত্র: ${it.link}`;
 
       if (await titleExists(it.title)) {
         skipped.push({ title: it.title, reason: "duplicate" });
@@ -177,9 +216,9 @@ export default async function handler(req, res) {
         const id = await insertNews({
           title:   it.title,
           image:   it.image,
-          details: details.slice(0, 1500) /* row safeguard */
+          details: details.slice(0, 8000) /* row safeguard */
         });
-        added.push({ id, title: it.title });
+        added.push({ id, title: it.title, bodyLen: it.body ? it.body.length : 0 });
       } catch (err) {
         skipped.push({ title: it.title, reason: err.message });
       }
