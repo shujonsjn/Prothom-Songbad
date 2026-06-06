@@ -65,6 +65,31 @@
         load();
         setTimeout(() => { try { loadDashboard(); } catch(e){ console.warn("dashboard:", e); } }, 50);
         setTimeout(() => { try { loadProfile(); } catch(e){ console.warn("profile:", e); } }, 200);
+        setTimeout(() => { try { loadInbox(); } catch(e){ console.warn("inbox:", e); } }, 400);
+        /* periodic inbox count refresh (every 30s) */
+        if(!window._inboxPoll){
+          window._inboxPoll = setInterval(() => {
+            if(admin && admin.style.display !== "none"){
+              fetch("/api/inbox", { headers: authHeader() })
+                .then(r => r.ok ? r.json() : null)
+                .then(j => {
+                  if(!j || !j.counts) return;
+                  const c = j.counts;
+                  const cnt = document.getElementById("cntInbox");
+                  if(cnt){
+                    const u = c.unread || 0;
+                    cnt.style.display = u > 0 ? "" : "none";
+                    cnt.textContent = u > 99 ? "99+" : String(u);
+                  }
+                  /* if user is on inbox section, refresh list too */
+                  const onInbox = document.querySelector('[data-section="inbox"]')?.classList.contains("active") ||
+                                  document.querySelector('.admin-section[data-section="inbox"]')?.style.display !== "none";
+                  if(onInbox && j.messages) _inboxMessages = j.messages, renderInboxList();
+                })
+                .catch(() => {});
+            }
+          }, 30000);
+        }
       })
       .catch(err => {
         alert("Login failed: " + err.message);
@@ -1025,6 +1050,240 @@
       loadProfile();
     });
   });
+
+  /* ============================================================
+     INBOX
+     ============================================================ */
+  let _inboxMessages = [];
+  let _inboxFilter = "all";
+  let _inboxQ = "";
+  let _inboxSelected = null;
+  let _inboxSearchTimer = null;
+
+  window.loadInbox = async function(){
+    try {
+      const params = new URLSearchParams({ filter: _inboxFilter, q: _inboxQ });
+      const r = await fetch("/api/inbox?" + params, { headers: authHeader() });
+      const j = await r.json();
+      if(!r.ok) throw new Error(j.error || "HTTP " + r.status);
+      _inboxMessages = j.messages || [];
+      const c = j.counts || {};
+      document.getElementById("ifCountAll").textContent     = c.total     || 0;
+      document.getElementById("ifCountUnread").textContent  = c.unread    || 0;
+      document.getElementById("ifCountStarred").textContent = c.starred   || 0;
+      document.getElementById("ifCountArchived").textContent= c.archived  || 0;
+      document.getElementById("ifCountSpam").textContent    = c.spam      || 0;
+      const cnt = document.getElementById("cntInbox");
+      if(cnt){
+        const u = c.unread || 0;
+        cnt.style.display = u > 0 ? "" : "none";
+        cnt.textContent = u > 99 ? "99+" : String(u);
+      }
+      renderInboxList();
+      if(_inboxSelected && !_inboxMessages.find(m => m.id === _inboxSelected)){
+        _inboxSelected = null;
+        renderInboxView();
+      }
+    } catch (err) {
+      console.error("inbox load:", err);
+      toast("Inbox load failed: " + err.message, "error");
+    }
+  };
+
+  function renderInboxList(){
+    const wrap = document.getElementById("inboxItems");
+    if(!wrap) return;
+    if(!_inboxMessages.length){
+      wrap.innerHTML = '<div class="inbox-empty">No messages in this view.</div>';
+      return;
+    }
+    wrap.innerHTML = _inboxMessages.map(m => {
+      const initial = (m.from_name || m.from_email || "?").trim().charAt(0).toUpperCase();
+      const isActive = _inboxSelected === m.id ? " active" : "";
+      const isUnread = !m.read && !m.archived && !m.spam ? " unread" : "";
+      const isStarred = m.starred ? " starred" : "";
+      const from = m.from_name || m.from_email || "(unknown)";
+      return '<div class="inbox-item' + isActive + isUnread + isStarred + '" onclick="openInboxMessage(' + m.id + ')">' +
+        '<div class="inbox-avatar">' + esc(initial) + '</div>' +
+        '<div class="inbox-item-body">' +
+          '<div class="inbox-item-from">' + esc(from) + '</div>' +
+          '<div class="inbox-item-subject">' + esc(m.subject || "(no subject)") + '</div>' +
+          '<div class="inbox-item-snippet">' + esc(m.snippet || "") + '</div>' +
+        '</div>' +
+        '<div>' +
+          '<div class="inbox-item-time">' + esc(inboxTime(m.created_at)) + '</div>' +
+          '<div class="inbox-item-star">' + (m.starred ? '★' : '☆') + '</div>' +
+        '</div>' +
+      '</div>';
+    }).join("");
+  }
+
+  function inboxTime(iso){
+    if(!iso) return "";
+    const t = iso.replace(" ", "T") + (iso.endsWith("Z") ? "" : "Z");
+    const d = new Date(t);
+    if(isNaN(d)) return iso;
+    const now = new Date();
+    const diff = (now - d) / 1000;
+    if(diff < 60) return "just now";
+    if(diff < 3600) return Math.floor(diff/60) + "m";
+    if(diff < 86400) return Math.floor(diff/3600) + "h";
+    if(diff < 86400*7) return Math.floor(diff/86400) + "d";
+    return d.toLocaleDateString("en-GB", { day:"numeric", month:"short" });
+  }
+
+  window.openInboxMessage = async function(id){
+    _inboxSelected = id;
+    renderInboxList();
+    renderInboxView();
+    try {
+      const r = await fetch("/api/inbox/" + id, { headers: authHeader() });
+      const m = await r.json();
+      if(!r.ok) throw new Error(m.error || "HTTP " + r.status);
+      Object.assign(_inboxMessages.find(x => x.id === id) || {}, { read: 1 });
+      renderInboxList();
+      renderInboxView(m);
+      /* refresh unread count */
+      loadInbox();
+    } catch (err) {
+      toast("Load message failed: " + err.message, "error");
+    }
+  };
+
+  function renderInboxView(m){
+    const v = document.getElementById("inboxView");
+    if(!v) return;
+    if(!m){
+      v.innerHTML = '<div class="inbox-empty">Select a message to read</div>';
+      return;
+    }
+    const initial = (m.from_name || m.from_email || "?").trim().charAt(0).toUpperCase();
+    const fromLine = m.from_name
+      ? esc(m.from_name) + ' &lt;<a href="mailto:' + esc(m.from_email) + '">' + esc(m.from_email) + '</a>&gt;'
+      : '<a href="mailto:' + esc(m.from_email) + '">' + esc(m.from_email) + '</a>';
+    const fullDate = m.created_at ? m.created_at.replace(" ", "T") + "Z" : "";
+    const d = fullDate ? new Date(fullDate) : null;
+    const dateStr = d && !isNaN(d) ? d.toLocaleString() : m.created_at;
+    const replyHref = "mailto:" + (m.from_email || "") +
+      "?subject=" + encodeURIComponent((m.subject || "").startsWith("Re:") ? m.subject : "Re: " + (m.subject || "")) +
+      "&body=" + encodeURIComponent("\n\n--- Original message ---\nFrom: " + (m.from_name || m.from_email) + "\nDate: " + dateStr + "\n\n");
+    v.innerHTML =
+      '<div class="inbox-view-head">' +
+        '<div class="inbox-avatar">' + esc(initial) + '</div>' +
+        '<div class="inbox-view-meta">' +
+          '<div class="inbox-view-subject">' + esc(m.subject || "(no subject)") + '</div>' +
+          '<div class="inbox-view-from">From: ' + fromLine + ' · ' + esc(dateStr) + '</div>' +
+        '</div>' +
+        '<div class="inbox-view-actions">' +
+          '<button class="btn-text" onclick="toggleInboxStar(' + m.id + ')" title="Star"><span class="ms">' + (m.starred ? 'star' : 'star_border') + '</span></button>' +
+          '<button class="btn-text" onclick="toggleInboxArchive(' + m.id + ')" title="Archive"><span class="ms">' + (m.archived ? 'unarchive' : 'archive') + '</span></button>' +
+          '<button class="btn-text" onclick="toggleInboxSpam(' + m.id + ')" title="Spam"><span class="ms">report</span></button>' +
+          '<button class="btn-text" onclick="deleteInboxMessage(' + m.id + ')" title="Delete"><span class="ms">delete</span></button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="inbox-view-body">' + esc(m.body_text || (m.body_html ? m.body_html.replace(/<[^>]+>/g, " ") : "(no body)")) + '</div>' +
+      '<div class="inbox-view-foot">' +
+        '<a class="btn-tonal" href="' + replyHref + '" style="text-decoration:none;">' +
+          '<span class="ms">reply</span> Reply via mail client' +
+        '</a>' +
+        '<span class="inbox-meta-foot" style="font-size:11px;color:var(--md-on-surface-var);opacity:.7;align-self:center;">' +
+          'Source: ' + esc(m.source || "?") + (m.message_id ? " · ID: " + esc(m.message_id.slice(0,40)) : "") ) +
+        '</span>' +
+      '</div>';
+  }
+
+  window.addTestMessage = function(){
+    fetch("/api/inbox/test", { method: "POST", headers: authHeader() })
+      .then(r => r.json())
+      .then(j => {
+        if(!j.ok) throw new Error(j.error || "failed");
+        toast("Test message added ✓");
+        _inboxSelected = j.id;
+        loadInbox().then(() => openInboxMessage(j.id));
+      })
+      .catch(err => toast("Test failed: " + err.message, "error"));
+  };
+
+  window.toggleInboxStar = function(id){
+    const m = _inboxMessages.find(x => x.id === id);
+    if(!m) return;
+    const action = m.starred ? "unstar" : "star";
+    fetch("/api/inbox/" + id + "/" + action, { method: "PUT", headers: authHeader() })
+      .then(() => { m.starred = m.starred ? 0 : 1; renderInboxList(); loadInbox(); });
+  };
+  window.toggleInboxArchive = function(id){
+    const m = _inboxMessages.find(x => x.id === id);
+    if(!m) return;
+    const action = m.archived ? "unarchive" : "archive";
+    fetch("/api/inbox/" + id + "/" + action, { method: "PUT", headers: authHeader() })
+      .then(() => { m.archived = m.archived ? 0 : 1; loadInbox(); });
+  };
+  window.toggleInboxSpam = function(id){
+    const m = _inboxMessages.find(x => x.id === id);
+    if(!m) return;
+    const action = m.spam ? "unspam" : "spam";
+    fetch("/api/inbox/" + id + "/" + action, { method: "PUT", headers: authHeader() })
+      .then(() => { m.spam = m.spam ? 0 : 1; loadInbox(); });
+  };
+  window.deleteInboxMessage = function(id){
+    if(!confirm("Delete this message?")) return;
+    fetch("/api/inbox/" + id, { method: "DELETE", headers: authHeader() })
+      .then(() => { _inboxSelected = null; loadInbox(); renderInboxView(); toast("Deleted"); });
+  };
+  window.showInboxSetup = async function(){
+    try {
+      const r = await fetch("/api/inbox/worker-code", { headers: authHeader() });
+      const j = await r.json();
+      const code = j.code;
+      const w = window.open("", "worker", "width=900,height=700");
+      w.document.write(
+        '<title>Cloudflare Email Worker</title>' +
+        '<pre style="font:12px/1.5 monospace;padding:16px;background:#1e1e1e;color:#d4d4d4;white-space:pre-wrap;word-break:break-word;">' +
+        code.replace(/</g,"&lt;").replace(/>/g,"&gt;") +
+        '</pre>' +
+        '<div style="padding:14px;font:13px sans-serif;background:#fff;color:#222;">' +
+        '<b>Setup steps:</b><ol style="margin:8px 0 0 20px;line-height:1.7;">' +
+        '<li>Cloudflare Dashboard → <b>Email</b> → <b>Email Routing</b> → enable for <code>prothom-songbad.com</code></li>' +
+        '<li><b>Email Workers</b> → <b>Create</b> → paste the code above</li>' +
+        '<li>Worker → <b>Settings</b> → Variables: <code>WEBHOOK_URL</code> = <code>' + j.webhookUrl + '</code> + <code>WEBHOOK_SECRET</code> = (same as Vercel env <code>INBOX_WEBHOOK_SECRET</code>)</li>' +
+        '<li>Email Routing → <b>Routing rules</b> → <b>Create</b> → <b>Catch-all</b> for <code>prothom-songbad.com</code> → action = <b>Send to Worker</b> → select your worker</li>' +
+        '<li>Vercel env: add <code>INBOX_WEBHOOK_SECRET</code> = (same secret)</li>' +
+        '<li>Send test email to <code>admin@prothom-songbad.com</code> — it should appear here within seconds</li>' +
+        '</ol></div>'
+      );
+    } catch (err) {
+      toast("Failed: " + err.message, "error");
+    }
+  };
+
+  /* inbox section open */
+  document.querySelectorAll('.sb-link[data-section="inbox"]').forEach(a => {
+    a.addEventListener("click", (e) => {
+      e.preventDefault();
+      showSection("inbox");
+      loadInbox();
+    });
+  });
+  /* inbox filter chips */
+  document.querySelectorAll("#inboxFilters .if-chip").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll("#inboxFilters .if-chip").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      _inboxFilter = btn.dataset.filter;
+      loadInbox();
+    });
+  });
+  /* inbox search (debounced) */
+  const inboxSearchEl = document.getElementById("inboxSearch");
+  if(inboxSearchEl){
+    inboxSearchEl.addEventListener("input", () => {
+      clearTimeout(_inboxSearchTimer);
+      _inboxSearchTimer = setTimeout(() => {
+        _inboxQ = inboxSearchEl.value.trim();
+        loadInbox();
+      }, 250);
+    });
+  }
 
   /* ===== BANNERS / ADS ===== */
   let _bannersCache = [];

@@ -102,6 +102,32 @@ let schemaReady = (async () => {
   try { await db.exec("ALTER TABLE admins ADD COLUMN email TEXT"); } catch {}
   try { await db.exec("ALTER TABLE admins ADD COLUMN phone TEXT"); } catch {}
 
+  /* ===== Inbox (incoming email from Cloudflare Email Routing / others) ===== */
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS inbox_messages (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      direction    TEXT    DEFAULT 'inbound',
+      from_email   TEXT,
+      from_name    TEXT,
+      to_email     TEXT,
+      subject      TEXT,
+      snippet      TEXT,
+      body_text    TEXT,
+      body_html    TEXT,
+      message_id   TEXT,
+      in_reply_to  TEXT,
+      headers_json TEXT,
+      source       TEXT,
+      read         INTEGER DEFAULT 0,
+      starred      INTEGER DEFAULT 0,
+      archived     INTEGER DEFAULT 0,
+      spam         INTEGER DEFAULT 0,
+      created_at   DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  try { await db.exec("CREATE INDEX IF NOT EXISTS idx_inbox_created ON inbox_messages(created_at DESC)"); } catch {}
+  try { await db.exec("CREATE INDEX IF NOT EXISTS idx_inbox_msgid   ON inbox_messages(message_id)"); } catch {}
+
   /* ===== Banners / Ads ===== */
   await db.exec(`
     CREATE TABLE IF NOT EXISTS banners (
@@ -799,6 +825,246 @@ app.delete("/api/news/:id", requireAuth, async (req, res) => {
 app.use((err, req, res, next) => {
   console.error(err);
   res.status(err.status || 500).json({ error: err.message || "Server error" });
+});
+
+/* ============================================================
+   Inbox — incoming email (Cloudflare Email Routing webhook)
+   ============================================================ */
+
+/* Webhook: receives email from Cloudflare Email Worker.
+   Worker code (provided separately in admin panel) should POST
+   JSON with: { from, to, subject, body_text, body_html, message_id, headers }
+   Authenticated by shared secret in header. */
+app.post("/api/inbox/webhook", async (req, res) => {
+  await ready();
+  try {
+    const secret = process.env.INBOX_WEBHOOK_SECRET || "";
+    if(secret){
+      const got = req.headers["x-webhook-secret"] || req.headers["x-inbox-secret"] || "";
+      if(got !== secret) return res.status(401).json({ error: "Invalid webhook secret" });
+    }
+    const { from, to, subject, body_text, body_html, message_id, in_reply_to, headers, source } = req.body || {};
+    if(!from && !subject && !body_text && !body_html){
+      return res.status(400).json({ error: "Empty payload" });
+    }
+    /* parse from "Name <a@b.com>" format */
+    let fromEmail = "", fromName = "";
+    const fm = String(from || "").match(/^\s*"?([^"<]*?)"?\s*<([^>]+)>/);
+    if(fm){ fromName = fm[1].trim(); fromEmail = fm[2].trim().toLowerCase(); }
+    else  { fromEmail = String(from || "").trim().toLowerCase(); }
+    const toEmail = String(to || "").trim().toLowerCase();
+    /* dedup by message_id */
+    if(message_id){
+      const dup = await db.prepare("SELECT id FROM inbox_messages WHERE message_id = ?").get(message_id);
+      if(dup) return res.json({ ok: true, id: dup.id, dedup: true });
+    }
+    const subj = String(subject || "(no subject)").slice(0, 500);
+    const txt  = body_text ? String(body_text).slice(0, 50000) : null;
+    const html = body_html ? String(body_html).slice(0, 200000) : null;
+    const snippet = (txt || (html ? html.replace(/<[^>]+>/g, " ") : "")).replace(/\s+/g, " ").trim().slice(0, 220);
+    const result = await db.prepare(
+      "INSERT INTO inbox_messages (direction, from_email, from_name, to_email, subject, snippet, body_text, body_html, message_id, in_reply_to, headers_json, source) VALUES (?, 'inbound', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    ).run(
+      fromEmail, fromName, toEmail, subj, snippet, txt, html,
+      message_id || null, in_reply_to || null,
+      headers ? JSON.stringify(headers).slice(0, 50000) : null,
+      (source || "cloudflare").slice(0, 30)
+    );
+    res.json({ ok: true, id: result.lastInsertRowid || result.lastInsertRowid });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* Test: insert a fake message (for demo / verifying the UI without email service) */
+app.post("/api/inbox/test", requireAuth, async (req, res) => {
+  await ready();
+  try {
+    const samples = [
+      { from: "Rahim Khan <rahim@example.com>",        subject: "আপনার সাইটে বিজ্ঞাপন দিতে চাই",            text: "স্যার, আমি আমার দোকানের বিজ্ঞাপন prothom-songbad.com এ দিতে চাই। মাসিক খরচ কত হবে?\n\nধন্যবাদ,\nRahim" },
+      { from: "newsletter@prothomsports.com",          subject: "Weekly digest — top 10 sports stories",   text: "This week in sports: cricket world cup qualifiers, FIFA friendly matches, and more. Click to read all 10 stories." },
+      { from: "noreply@github.com",                    subject: "[GitHub] New login to your account",      text: "A new sign-in was detected from Chrome on Windows. If this wasn't you, please secure your account." },
+      { from: "Sadia Hossain <sadia.h@gmail.com>",     subject: "একটি অনুসন্ধান",                            text: "আসসালামু আলাইকুম, আমি একজন পাঠক। আপনাদের জাতীয় বিভাগে গতকাল একটি সংবাদ ছিল যেটি এখন দেখতে পাচ্ছি না। লিংক দিতে পারবেন?" },
+      { from: "support@cloudflare.com",                subject: "Your Cloudflare Email Routing is active", text: "Your email routing is now active. Incoming emails to admin@prothom-songbad.com will be delivered to your destination." }
+    ];
+    const s = samples[Math.floor(Math.random() * samples.length)];
+    const fm = s.from.match(/^\s*"?([^"<]*?)"?\s*<([^>]+)>/);
+    const fromName = fm ? fm[1].trim() : "";
+    const fromEmail = fm ? fm[2].trim().toLowerCase() : s.from.toLowerCase();
+    const to = req.body?.to || "admin@prothom-songbad.com";
+    const result = await db.prepare(
+      "INSERT INTO inbox_messages (direction, from_email, from_name, to_email, subject, snippet, body_text, source) VALUES ('inbound', ?, ?, ?, ?, ?, ?, 'test')"
+    ).run(fromEmail, fromName, to.toLowerCase(), s.subject, s.text.slice(0, 220), s.text);
+    res.json({ ok: true, id: result.lastInsertRowid || result.lastInsertRowid });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* List messages */
+app.get("/api/inbox", requireAuth, async (req, res) => {
+  await ready();
+  try {
+    const filter = String(req.query.filter || "all"); // all | unread | starred | archived | spam
+    const q = String(req.query.q || "").trim();
+    const limit = Math.min(Number(req.query.limit) || 50, 200);
+    const offset = Math.max(Number(req.query.offset) || 0, 0);
+    let where = "1=1";
+    const args = [];
+    if(filter === "unread")   where += " AND read=0 AND archived=0 AND spam=0";
+    else if(filter === "starred")  where += " AND starred=1";
+    else if(filter === "archived") where += " AND archived=1";
+    else if(filter === "spam")     where += " AND spam=1";
+    else                            where += " AND archived=0 AND spam=0";
+    if(q){
+      where += " AND (subject LIKE ? OR from_email LIKE ? OR from_name LIKE ? OR body_text LIKE ?)";
+      const like = "%" + q + "%";
+      args.push(like, like, like, like);
+    }
+    const rows = await db.prepare(
+      `SELECT id, direction, from_email, from_name, to_email, subject, snippet, read, starred, archived, spam, source, created_at
+       FROM inbox_messages WHERE ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`
+    ).all(...args, limit, offset);
+    const counts = await db.prepare(
+      `SELECT
+         SUM(CASE WHEN read=0 AND archived=0 AND spam=0 THEN 1 ELSE 0 END) AS unread,
+         SUM(CASE WHEN starred=1 THEN 1 ELSE 0 END) AS starred,
+         SUM(CASE WHEN archived=1 THEN 1 ELSE 0 END) AS archived,
+         SUM(CASE WHEN spam=1 THEN 1 ELSE 0 END) AS spam,
+         COUNT(*) AS total
+       FROM inbox_messages`
+    ).get();
+    res.json({ messages: rows, counts, filter, q });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* Get one message (and mark as read) */
+app.get("/api/inbox/:id", requireAuth, async (req, res) => {
+  await ready();
+  try {
+    const id = Number(req.params.id);
+    if(!id) return res.status(400).json({ error: "Invalid id" });
+    const row = await db.prepare("SELECT * FROM inbox_messages WHERE id = ?").get(id);
+    if(!row) return res.status(404).json({ error: "Message not found" });
+    if(!row.read){
+      await db.prepare("UPDATE inbox_messages SET read=1 WHERE id=?").run(id);
+      row.read = 1;
+    }
+    /* parse headers_json for display */
+    let headers = null;
+    if(row.headers_json){ try { headers = JSON.parse(row.headers_json); } catch {} }
+    res.json({ ...row, headers });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* Toggle read / starred / archived / spam */
+app.put("/api/inbox/:id/:action", requireAuth, async (req, res) => {
+  await ready();
+  try {
+    const id = Number(req.params.id);
+    const action = String(req.params.action);
+    if(!id) return res.status(400).json({ error: "Invalid id" });
+    const col = action === "read"     ? "read"
+              : action === "star"     ? "starred"
+              : action === "unstar"   ? "starred"
+              : action === "archive"  ? "archived"
+              : action === "unarchive"? "archived"
+              : action === "spam"     ? "spam"
+              : action === "unspam"   ? "spam"
+              : null;
+    if(!col) return res.status(400).json({ error: "Invalid action" });
+    const val = (action.startsWith("un")) ? 0 : 1;
+    await db.prepare(`UPDATE inbox_messages SET ${col}=? WHERE id=?`).run(val, id);
+    res.json({ ok: true, id, [col]: val });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* Delete message */
+app.delete("/api/inbox/:id", requireAuth, async (req, res) => {
+  await ready();
+  try {
+    const id = Number(req.params.id);
+    if(!id) return res.status(400).json({ error: "Invalid id" });
+    await db.prepare("DELETE FROM inbox_messages WHERE id=?").run(id);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* Cloudflare Email Worker — code for admin to copy */
+app.get("/api/inbox/worker-code", requireAuth, async (req, res) => {
+  await ready();
+  const webhookUrl = `${req.protocol}://${req.get("host")}/api/inbox/webhook`;
+  const secret = process.env.INBOX_WEBHOOK_SECRET || "INBOX_SECRET_HERE";
+  const code = `// Cloudflare Email Worker — paste this in Workers → your-email-routing-worker → "Email Workers"
+// 1. Cloudflare Dashboard → Email → Email Routing → enable
+// 2. Click "Edit" on the destination/worker, paste this code
+// 3. Set environment variables: WEBHOOK_URL and WEBHOOK_SECRET (match Vercel env)
+// 4. Add a routing rule: Catch-all address → admin@prothom-songbad.com → this worker
+
+export default {
+  async email(message, env, ctx) {
+    try {
+      const headers = {};
+      for (const [k, v] of message.headers) headers[k.toLowerCase()] = v;
+
+      const from = message.from;
+      const to = message.to;
+      const subject = headers["subject"] || "(no subject)";
+      const messageId = headers["message-id"] || "";
+
+      // Read raw email body (MIME)
+      const reader = message.raw.getReader();
+      const decoder = new TextDecoder("utf-8");
+      let raw = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        raw += decoder.decode(value, { stream: true });
+      }
+
+      // Extract a simple text body from MIME (best-effort).
+      // For full HTML body, you can use a MIME parser library.
+      let bodyText = raw;
+      let bodyHtml = null;
+      const ct = (headers["content-type"] || "").toLowerCase();
+      if (ct.includes("multipart/")) {
+        // crude split: find first text/plain part
+        const m = raw.match(/Content-Type:\\s*text\\/plain[^\\n]*\\r?\\n\\r?\\n([\\s\\S]*?)(?:\\r?\\n--[A-Za-z0-9_=-]+)/i);
+        if (m) bodyText = m[1].trim();
+        const h = raw.match(/Content-Type:\\s*text\\/html[^\\n]*\\r?\\n\\r?\\n([\\s\\S]*?)(?:\\r?\\n--[A-Za-z0-9_=-]+)/i);
+        if (h) bodyHtml = h[1].trim();
+      }
+
+      await fetch(env.WEBHOOK_URL, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-webhook-secret": env.WEBHOOK_SECRET
+        },
+        body: JSON.stringify({
+          from, to, subject,
+          body_text: bodyText,
+          body_html: bodyHtml,
+          message_id: messageId,
+          headers: { from, to, subject, "message-id": messageId, date: headers["date"] || "" },
+          source: "cloudflare"
+        })
+      });
+    } catch (err) {
+      console.error("email worker error:", err);
+    }
+  }
+};
+`;
+  res.json({ code, webhookUrl, secretEnv: "INBOX_WEBHOOK_SECRET" });
 });
 
 /* ===== Serverless handler ===== */

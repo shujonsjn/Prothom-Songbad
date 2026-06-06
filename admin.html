@@ -96,6 +96,11 @@
           <span class="sb-icon"><span class="ms">account_circle</span></span>
           <span class="sb-label">Profile</span>
         </a>
+        <a href="#" class="sb-link" data-section="inbox">
+          <span class="sb-icon"><span class="ms">inbox</span></span>
+          <span class="sb-label">Inbox</span>
+          <span class="sb-count" id="cntInbox" style="display:none;"></span>
+        </a>
         <a href="index.html" class="sb-link sb-external">
           <span class="sb-icon"><span class="ms">open_in_new</span></span>
           <span class="sb-label">View Site</span>
@@ -460,6 +465,51 @@
           </form>
 
           <div id="profileNote" class="profile-note" style="display:none;"></div>
+        </div>
+      </section>
+
+      <section class="admin-section" data-section="inbox">
+        <h2 class="section-title"><span class="md-icon"><span class="ms">inbox</span></span>Email Inbox</h2>
+
+        <div class="card" style="margin-bottom:14px;">
+          <p style="font-size:13px;color:var(--md-on-surface-var);margin:0 0 10px;">
+            <span class="ms" style="vertical-align:-2px;color:var(--md-primary);">info</span>
+            Cloudflare Email Routing থেকে আসা ইমেইল এখানে দেখাবে। প্রথমে নিচের setup করতে হবে —
+            <a href="#" onclick="showInboxSetup();return false;" style="color:var(--md-primary);font-weight:600;">Setup দেখুন</a>
+          </p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn-tonal" type="button" onclick="addTestMessage()">
+              <span class="ms">science</span> Send test message
+            </button>
+            <button class="btn-outlined" type="button" onclick="loadInbox()">
+              <span class="ms">refresh</span> Reload
+            </button>
+            <button class="btn-text" type="button" onclick="showInboxSetup()">
+              <span class="ms">code</span> View worker code
+            </button>
+          </div>
+        </div>
+
+        <div class="inbox-shell">
+          <aside class="inbox-list">
+            <div class="inbox-filters" id="inboxFilters">
+              <button class="if-chip active" data-filter="all">All <span class="if-count" id="ifCountAll">0</span></button>
+              <button class="if-chip" data-filter="unread">Unread <span class="if-count" id="ifCountUnread">0</span></button>
+              <button class="if-chip" data-filter="starred">Starred <span class="if-count" id="ifCountStarred">0</span></button>
+              <button class="if-chip" data-filter="archived">Archived <span class="if-count" id="ifCountArchived">0</span></button>
+              <button class="if-chip" data-filter="spam">Spam <span class="if-count" id="ifCountSpam">0</span></button>
+            </div>
+            <div class="inbox-search">
+              <span class="ms">search</span>
+              <input id="inboxSearch" type="search" placeholder="Search subject, from, body…" autocomplete="off">
+            </div>
+            <div class="inbox-items" id="inboxItems">
+              <div class="inbox-empty">No messages yet. Click <b>Send test message</b> to see how it works.</div>
+            </div>
+          </aside>
+          <main class="inbox-view" id="inboxView">
+            <div class="inbox-empty">Select a message to read</div>
+          </main>
         </div>
       </section>
 
