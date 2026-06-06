@@ -1092,11 +1092,8 @@ body.news-paper{ background:#fafaf5; }
   initial-letter:2;
 }
 
-/* lede lead-in — first 2-3 words bold + slightly larger, kept together so line break lands after them */
+/* lede lead-in — first 2-3 words kept together (no font change) so line break lands after them */
 .article-body .lede-lead{
-  font-weight:700;
-  font-size:1.08em;
-  color:#0a0a0a;
   white-space:nowrap;
 }
 .article-body .article-empty{
