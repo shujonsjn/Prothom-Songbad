@@ -1062,26 +1062,34 @@ body.news-paper{ background:#fafaf5; }
 .article-body{
   font-family:'Noto Serif Bengali',serif;
   font-size:19px;
-  line-height:1.95;
+  line-height:1.85;
   color:#1a1a1a;
 }
 .article-body p{
   margin:0 0 22px;
+  text-align:left;
+  hyphens:auto;
+}
+.article-body p.lede{
+  font-size:20px;
+  line-height:1.75;
+  margin-bottom:28px;
   text-align:justify;
   text-justify:inter-word;
-  hyphens:auto;
 }
 .article-body p.lede::first-letter,
 .article-body .dropcap{
   font-family:'Noto Serif Bengali','Playfair Display',serif;
   font-weight:900;
-  font-size:74px;
-  line-height:0.85;
+  font-size:54px;
+  line-height:0.9;
   float:left;
-  padding:6px 12px 0 0;
-  margin-top:6px;
+  padding:5px 10px 0 0;
+  margin-top:2px;
   color:#c1131d;
   text-transform:uppercase;
+  -webkit-initial-letter:3;
+  initial-letter:3;
 }
 .article-body .article-empty{
   color:#888;
@@ -1445,8 +1453,9 @@ body.news-paper{ background:#fafaf5; }
   .dek{ font-size:16px; }
   .byline{ font-size:11px; gap:6px; }
   .article-body{ font-size:16px; line-height:1.75; }
+  .article-body p.lede{ font-size:17px; }
   .article-body p.lede::first-letter,
-  .article-body .dropcap{ font-size:54px; }
+  .article-body .dropcap{ font-size:42px; }
   .article-body .pull-quote{ font-size:18px; padding:20px 16px; }
   .share-row .share-btn span{ display:none; }
   .share-row .share-btn{ padding:8px 10px; }

@@ -96,13 +96,14 @@
     if(sentences.length === 0) return '<p>' + escHtml(normalized) + '</p>';
 
     const parts = [];
-    /* lede — first paragraph with drop cap */
-    const first = sentences[0];
-    parts.push(`<p class="lede">${wrapFirstChar(escHtml(first))}</p>`);
+    /* lede — first paragraph with drop cap (combine 1st 2 sentences so it wraps nicely) */
+    const firstCount = sentences.length >= 3 ? 2 : 1;
+    const firstChunk = sentences.slice(0, firstCount).join(" ");
+    parts.push(`<p class="lede">${wrapFirstChar(escHtml(firstChunk))}</p>`);
 
     /* pull quote — first impactful sentence from middle of article */
-    if(sentences.length >= 4){
-      const idx = Math.min(2, sentences.length - 2);
+    if(sentences.length >= 5){
+      const idx = Math.min(3, sentences.length - 2);
       const pq = sentences[idx].trim();
       if(pq.length > 30 && pq.length < 220){
         parts.push(`<blockquote class="pull-quote">${escHtml(pq)}</blockquote>`);
@@ -110,7 +111,7 @@
     }
 
     /* remaining sentences grouped into paragraphs of 2-3 */
-    const rest = sentences.slice(1);
+    const rest = sentences.slice(firstCount);
     let buf = [];
     for(let i = 0; i < rest.length; i++){
       buf.push(rest[i]);
