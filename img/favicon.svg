@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#c1131d"/>
+      <stop offset="100%" stop-color="#8a0a12"/>
+    </linearGradient>
+  </defs>
+  <rect x="2" y="2" width="60" height="60" rx="12" fill="url(#bg)"/>
+  <g transform="translate(11,12)">
+    <path d="M3 4 L29 4 L29 40 L3 40 Z" fill="#f4eee2" opacity="0.85"/>
+    <path d="M7 7 L40 7 L40 42 L7 42 Z" fill="#ffffff" stroke="#0a0a0a" stroke-width="1.4" stroke-linejoin="round"/>
+    <rect x="9.5" y="10" width="28" height="5" fill="#c1131d"/>
+    <rect x="9.5" y="19" width="28" height="2" rx="1" fill="#0a0a0a" opacity="0.85"/>
+    <rect x="9.5" y="23.5" width="24" height="1.8" rx="0.9" fill="#0a0a0a" opacity="0.6"/>
+    <rect x="9.5" y="27" width="27" height="1.8" rx="0.9" fill="#0a0a0a" opacity="0.6"/>
+    <rect x="9.5" y="30.5" width="20" height="1.8" rx="0.9" fill="#0a0a0a" opacity="0.6"/>
+    <rect x="9.5" y="34" width="25" height="1.8" rx="0.9" fill="#0a0a0a" opacity="0.6"/>
+  </g>
+</svg>
