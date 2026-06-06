@@ -41,8 +41,16 @@
     /* headline */
     $("title").textContent = n.title || "শিরোনাম পাওয়া যায়নি";
 
-    /* dek removed — not used */
-    $("dek").style.display = "none";
+    /* dek (subtitle) — first 160 chars of details or empty */
+    const body = (n.details || "").trim();
+    $("dek").style.display = "";
+    if(body.length > 80){
+      const cut = body.slice(0, 160);
+      const lastStop = Math.max(cut.lastIndexOf("।"), cut.lastIndexOf("."));
+      $("dek").textContent = (lastStop > 60 ? cut.slice(0, lastStop + 1) : cut) + "…";
+    } else {
+      $("dek").textContent = "";
+    }
 
     /* image + caption (caption = category + time) */
     const img = $("img");
