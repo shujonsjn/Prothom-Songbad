@@ -1068,7 +1068,11 @@ body.news-paper{ background:#fafaf5; }
 .article-body p{
   margin:0 0 22px;
   text-align:left;
-  hyphens:auto;
+  hyphens:none;
+  -webkit-hyphens:none;
+  -ms-hyphens:none;
+  overflow-wrap:break-word;
+  word-wrap:break-word;
 }
 .article-body p.lede{
   font-size:19px;
@@ -1095,6 +1099,12 @@ body.news-paper{ background:#fafaf5; }
 /* lede lead-in — first 2-3 words kept together (no font change) so line break lands after them */
 .article-body .lede-lead{
   white-space:nowrap;
+}
+/* when a long word would overflow, allow it to wrap at any char instead of hyphenating */
+.article-body .lede-lead{
+  white-space:normal;
+  overflow-wrap:break-word;
+  word-break:keep-all;
 }
 .article-body .article-empty{
   color:#888;
