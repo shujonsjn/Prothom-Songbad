@@ -1091,6 +1091,14 @@ body.news-paper{ background:#fafaf5; }
   -webkit-initial-letter:2;
   initial-letter:2;
 }
+
+/* lede lead-in — first 2-3 words bold + slightly larger, kept together so line break lands after them */
+.article-body .lede-lead{
+  font-weight:700;
+  font-size:1.08em;
+  color:#0a0a0a;
+  white-space:nowrap;
+}
 .article-body .article-empty{
   color:#888;
   font-style:italic;

@@ -96,10 +96,10 @@
     if(sentences.length === 0) return '<p>' + escHtml(normalized) + '</p>';
 
     const parts = [];
-    /* lede — first paragraph with drop cap (combine 1st 3 sentences so it wraps nicely) */
+    /* lede — first paragraph with drop cap + bolded lead-in phrase (1st 2-3 words) */
     const firstCount = sentences.length >= 4 ? 3 : Math.max(1, sentences.length - 1);
     const firstChunk = sentences.slice(0, firstCount).join(" ");
-    parts.push(`<p class="lede">${wrapFirstChar(escHtml(firstChunk))}</p>`);
+    parts.push(`<p class="lede">${wrapFirstCharWithLead(escHtml(firstChunk))}</p>`);
 
     /* pull quote — first impactful sentence from middle of article */
     if(sentences.length >= 6){
@@ -135,6 +135,25 @@
     /* wrap the first visible character in a <span class="dropcap"> */
     if(!html) return "";
     return html.replace(/^(\s*)([^\s<])/, (m, sp, ch) => `${sp}<span class="dropcap">${ch}</span>`);
+  }
+
+  /* wraps the first character as dropcap, and the next 2-3 words as bolded lead-in.
+     Dropcap takes the FIRST char; the rest of the first word is preserved.
+     Lead-in covers the first 2-3 words including the rest of the first word. */
+  function wrapFirstCharWithLead(html){
+    if(!html) return "";
+    /* find first char boundary */
+    const m = html.match(/^(\s*)(\S)([\s\S]*)$/);
+    if(!m) return html;
+    const lead  = m[1];        // leading whitespace
+    const first = m[2];        // first character
+    const rest  = m[3];        // everything else
+    /* take the first 2-3 words from `rest` to bold */
+    const wordMatch = rest.match(/^([^\s]+(?:\s+[^\s]+){0,2})([\s\S]*)$/);
+    if(!wordMatch) return `${lead}<span class="dropcap">${first}</span>${rest}`;
+    const leadPhrase = wordMatch[1];
+    const tail       = wordMatch[2];
+    return `${lead}<span class="dropcap">${first}</span><span class="lede-lead">${leadPhrase}</span>${tail}`;
   }
 
   function buildTags(n){
