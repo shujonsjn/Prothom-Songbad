@@ -897,10 +897,9 @@ header.page-header{
   background:#ffffff;
   padding:18px 20px;
   border-bottom:3px double #0a0a0a;
-  position:sticky;
-  top:0;
-  z-index:999;
   text-align:center;
+  position:relative;
+  z-index:1;
 }
 
 header.page-header .logo{
