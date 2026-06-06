@@ -156,10 +156,13 @@
 
   /* "আরও পড়ুন" text-only list (one row per news) */
   function renderListItem(n){
+    const details = (n.details || "").replace(/\s+/g, " ").trim();
+    const excerpt = details.length > 100 ? details.slice(0, 100) + "…" : details;
     return `
       <li class="read-more-item" onclick="openNews(${n.id})">
         <div class="rm-text">
           <h4 class="rm-title">${esc(n.title)}</h4>
+          <p class="rm-excerpt">${esc(excerpt)}</p>
           <div class="rm-meta">${esc(n.category || "সংবাদ")} • ${esc(timeAgo(n.created_at))}</div>
         </div>
         <div class="rm-thumb">
