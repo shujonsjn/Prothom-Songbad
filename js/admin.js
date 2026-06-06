@@ -116,27 +116,18 @@
     if(statVidsEl)  statVidsEl.textContent  = (list ? list.querySelectorAll("[data-vid='1']").length : 0);
   }
 
-  /* ===== TOAST NOTIFICATIONS ===== */
-  function ensureToastWrap(){
-    let w = document.querySelector(".toast-wrap");
-    if(!w){
-      w = document.createElement("div");
-      w.className = "toast-wrap";
-      document.body.appendChild(w);
-    }
-    return w;
-  }
-  function toast(msg, type = "ok", ms = 2600){
-    const w = ensureToastWrap();
+  /* ===== M3 SNACKBAR ===== */
+  function toast(msg, type = "ok", ms = 2800){
+    const old = document.querySelector(".snack.show");
+    if(old){ old.classList.remove("show"); setTimeout(() => old.remove(), 250); }
     const t = document.createElement("div");
-    t.className = "toast " + type;
+    t.className = "snack " + type;
     const icons = { ok: "✓", err: "✕", warn: "!" };
-    t.innerHTML = `<span class="toast-icon">${icons[type] || "•"}</span><span class="toast-msg">${msg}</span>`;
-    w.appendChild(t);
+    t.innerHTML = `<span class="snack-icon">${icons[type] || "•"}</span><span class="snack-msg">${msg}</span>`;
+    document.body.appendChild(t);
+    requestAnimationFrame(() => t.classList.add("show"));
     setTimeout(() => {
-      t.style.transition = "opacity .3s, transform .3s";
-      t.style.opacity = "0";
-      t.style.transform = "translateX(20px)";
+      t.classList.remove("show");
       setTimeout(() => t.remove(), 320);
     }, ms);
   }
@@ -528,8 +519,8 @@
       return;
     }
     rows.forEach(n => {
-      const sub = n.subcategory ? ` <span class="pill">${esc(n.subcategory)}</span>` : "";
-      const vid = n.video ? ` <span class="pill red" title="Video">▶ Video</span>` : "";
+      const sub = n.subcategory ? ` <span class="chip assist">${esc(n.subcategory)}</span>` : "";
+      const vid = n.video ? ` <span class="chip red">▶ Video</span>` : "";
       list.innerHTML += `
         <div class="news-item" data-vid="${n.video ? 1 : 0}">
           <div class="info">
@@ -537,8 +528,8 @@
             <small>${esc(n.category)}${sub}${vid}</small>
           </div>
           <div class="actions">
-            <button class="small-btn" onclick="edit(${n.id})">Edit</button>
-            <button class="small-btn btn-red" onclick="del(${n.id})">Delete</button>
+            <button class="small-btn" onclick="edit(${n.id})"><span class="ms" style="font-size:16px;">edit</span> Edit</button>
+            <button class="small-btn btn-red" onclick="del(${n.id})"><span class="ms" style="font-size:16px;">delete</span> Delete</button>
           </div>
         </div>`;
     });

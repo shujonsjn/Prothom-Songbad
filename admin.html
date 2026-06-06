@@ -8,9 +8,14 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Roboto+Slab:wght@500;600;700&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
 
 <link rel="stylesheet" href="css/admin.css">
+
+<style>
+  /* Material Symbols utility class */
+  .ms{ font-family:'Material Symbols Outlined'; font-weight:normal; font-style:normal; font-size:20px; line-height:1; letter-spacing:normal; text-transform:none; display:inline-block; white-space:nowrap; word-wrap:normal; direction:ltr; -webkit-font-feature-settings:'liga'; -webkit-font-smoothing:antialiased; vertical-align:middle; }
+</style>
 
 </head>
 
@@ -21,24 +26,26 @@
   <div class="box">
     <div class="masthead">The Editorial Desk</div>
     <div class="sub">Sign in to continue</div>
-    <input id="u" placeholder="Username">
-    <input id="p" type="password" placeholder="Password">
-    <button onclick="login()">Login</button>
-    <div style="text-align:center;margin-top:14px;font-size:13px;">
-      <a href="index.html" style="color:#0a0a0a;text-decoration:underline;">← হোমপেজে ফিরুন</a>
-    </div>
+    <div class="field"><input id="u" placeholder=" " autocomplete="username"><label>Username</label></div>
+    <div class="field"><input id="p" type="password" placeholder=" " autocomplete="current-password"><label>Password</label></div>
+    <button class="btn-filled btn-block" onclick="login()" style="margin-top:20px;height:48px;">
+      <span class="ms" style="font-size:18px;">login</span> Sign in
+    </button>
+    <div class="login-hint">← <a href="index.html" style="color:var(--md-primary);">হোমপেজে ফিরুন</a></div>
   </div>
 </div>
 
 <!-- ADMIN PANEL -->
 <div class="admin" id="admin">
 
-  <div class="masthead-bar">
-    <h1>The Newsroom</h1>
-    <div class="tagline">
-      <span>Editorial Dashboard</span>
-      <a href="index.html">Home</a>
-      <a href="#" onclick="logout();return false;">Logout</a>
+  <div class="appbar">
+    <div class="appbar-title">
+      <div class="appbar-icon"><span class="ms">edit_note</span></div>
+      <h1>The Newsroom</h1>
+    </div>
+    <div class="appbar-actions">
+      <a href="index.html"><span class="ms" style="font-size:18px;margin-right:4px;">home</span>Home</a>
+      <button onclick="logout();return false;"><span class="ms" style="font-size:18px;margin-right:4px;">logout</span>Logout</button>
     </div>
   </div>
 
@@ -56,30 +63,30 @@
 
       <nav class="sb-menu">
         <a href="#" class="sb-link active" data-section="posts">
-          <span class="sb-icon">📰</span>
+          <span class="sb-icon"><span class="ms">article</span></span>
           <span class="sb-label">Posts / News</span>
           <span class="sb-count" id="cntPosts">–</span>
         </a>
         <a href="#" class="sb-link sb-sub" data-section="stories">
-          <span class="sb-icon">📄</span>
+          <span class="sb-icon"><span class="ms">auto_stories</span></span>
           <span class="sb-label">All Published Stories</span>
         </a>
         <a href="#" class="sb-link" data-section="categories">
-          <span class="sb-icon">📁</span>
+          <span class="sb-icon"><span class="ms">folder</span></span>
           <span class="sb-label">Categories</span>
           <span class="sb-count" id="cntCats">–</span>
         </a>
         <a href="#" class="sb-link" data-section="subcategories">
-          <span class="sb-icon">🏷️</span>
+          <span class="sb-icon"><span class="ms">label</span></span>
           <span class="sb-label">Sub-Categories</span>
           <span class="sb-count" id="cntSubs">–</span>
         </a>
         <a href="index.html" class="sb-link sb-external">
-          <span class="sb-icon">🌐</span>
+          <span class="sb-icon"><span class="ms">open_in_new</span></span>
           <span class="sb-label">View Site</span>
         </a>
         <a href="#" class="sb-link sb-logout" onclick="logout();return false;">
-          <span class="sb-icon">🚪</span>
+          <span class="sb-icon"><span class="ms">logout</span></span>
           <span class="sb-label">Logout</span>
         </a>
       </nav>
@@ -95,22 +102,34 @@
       <!-- ===== STATS OVERVIEW ===== -->
       <div class="stats">
         <div class="stat s-red">
-          <div class="stat-label">Total Posts</div>
+          <div class="stat-head">
+            <div class="stat-label">Total Posts</div>
+            <div class="stat-icon"><span class="ms">article</span></div>
+          </div>
           <div class="stat-value" id="statPosts">–</div>
           <div class="stat-sub">All published news</div>
         </div>
-        <div class="stat s-blue">
-          <div class="stat-label">Categories</div>
+        <div class="stat s-indigo">
+          <div class="stat-head">
+            <div class="stat-label">Categories</div>
+            <div class="stat-icon"><span class="ms">folder</span></div>
+          </div>
           <div class="stat-value" id="statCats">–</div>
           <div class="stat-sub">Main categories</div>
         </div>
         <div class="stat s-amber">
-          <div class="stat-label">Sub-Categories</div>
+          <div class="stat-head">
+            <div class="stat-label">Sub-Categories</div>
+            <div class="stat-icon"><span class="ms">label</span></div>
+          </div>
           <div class="stat-value" id="statSubs">–</div>
           <div class="stat-sub">Across all categories</div>
         </div>
         <div class="stat s-green">
-          <div class="stat-label">With Video</div>
+          <div class="stat-head">
+            <div class="stat-label">With Video</div>
+            <div class="stat-icon"><span class="ms">play_circle</span></div>
+          </div>
           <div class="stat-value" id="statVids">–</div>
           <div class="stat-sub">Video stories</div>
         </div>
@@ -119,66 +138,80 @@
       <!-- ===== POSTS SECTION ===== -->
       <section class="admin-section active" data-section="posts">
         <div class="card">
-          <h3 id="formCardTitle">Add / Edit News</h3>
+          <h3 id="formCardTitle"><span class="md-icon"><span class="ms">post_add</span></span>Add / Edit News</h3>
 
-          <input id="title" placeholder="Title">
-          <select id="category"></select>
+          <div class="field"><input id="title" placeholder=" "><label>Title</label></div>
+          <div class="field"><select id="category"></select><label>Category</label></div>
 
-          <div style="display:flex;gap:8px;align-items:stretch;margin:0;">
-            <select id="subcategory" style="flex:1;margin:0;">
-              <option value="">— Sub-category (optional) —</option>
-            </select>
-            <button type="button" id="addSubInline" style="width:auto;padding:0 16px;margin:0;background:#c1131d;color:#fff;border:none;font-size:13px;letter-spacing:.04em;" title="এই category-তে নতুন sub যোগ করুন">+ নতুন sub</button>
+          <div style="display:flex;gap:8px;align-items:flex-end;margin:8px 0 0;">
+            <div class="field" style="flex:1;margin:0;">
+              <select id="subcategory" style="margin:0;">
+                <option value="">— Sub-category (optional) —</option>
+              </select>
+              <label>Sub-category</label>
+            </div>
+            <button type="button" id="addSubInline" class="btn-tonal" style="height:56px;padding:0 20px;white-space:nowrap;margin:0;" title="এই category-তে নতুন sub যোগ করুন"><span class="ms" style="font-size:18px;">add</span> নতুন sub</button>
           </div>
 
-          <textarea id="details" placeholder="Details"></textarea>
+          <div class="field"><textarea id="details" placeholder=" "></textarea><label>Details</label></div>
           <input type="file" id="img">
-          <input id="imageUrl" placeholder="Image URL (optional)">
-          <input id="video" placeholder="Video URL — YouTube/Vimeo embed or .mp4 (optional)">
+          <div class="field"><input id="imageUrl" placeholder=" "><label>Image URL (optional)</label></div>
+          <div class="field"><input id="video" placeholder=" "><label>Video URL — YouTube/Vimeo embed or .mp4 (optional)</label></div>
 
-          <button onclick="save()">Publish</button>
+          <button class="btn-filled btn-block" onclick="save()" style="margin-top:16px;"><span class="ms">publish</span> Publish</button>
         </div>
       </section>
 
       <!-- ===== ALL PUBLISHED STORIES SECTION ===== -->
       <section class="admin-section" data-section="stories">
-        <h3 class="section-title">All Published Stories</h3>
-        <div id="list"></div>
+        <h2 class="section-title"><span class="md-icon"><span class="ms">auto_stories</span></span>All Published Stories</h2>
+        <div class="list" id="list"></div>
       </section>
 
       <!-- ===== CATEGORIES SECTION ===== -->
       <section class="admin-section" data-section="categories">
-        <h3 class="section-title">Manage Categories</h3>
+        <h2 class="section-title"><span class="md-icon"><span class="ms">folder</span></span>Manage Categories</h2>
         <div class="card">
-          <p style="font-size:13px;color:#6b6b6b;letter-spacing:.05em;margin-bottom:14px;">
+          <p style="font-size:13px;color:var(--md-on-surface-var);margin-bottom:14px;">
             নতুন ক্যাটাগরি যোগ করুন অথবা অপ্রয়োজনীয় ক্যাটাগরি মুছুন
           </p>
 
-          <div style="display:flex;gap:8px;align-items:flex-end;">
-            <input id="newCat" placeholder="নতুন ক্যাটাগরির নাম" style="flex:1;margin:0;">
-            <button onclick="addCategory()" style="width:auto;padding:10px 20px;margin:0;">Add</button>
+          <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
+            <div class="field" style="flex:1;min-width:220px;margin:0;">
+              <input id="newCat" placeholder=" ">
+              <label>নতুন ক্যাটাগরির নাম</label>
+            </div>
+            <button class="btn-filled" onclick="addCategory()" style="height:56px;padding:0 24px;white-space:nowrap;"><span class="ms">add</span> Add</button>
           </div>
 
-          <div id="catList" style="margin-top:18px;"></div>
+          <hr class="md-divider">
+          <div id="catList" class="list"></div>
         </div>
       </section>
 
       <!-- ===== SUB-CATEGORIES SECTION ===== -->
       <section class="admin-section" data-section="subcategories">
-        <h3 class="section-title">Manage Sub-Categories <span style="font-size:12px;color:#888;font-weight:400;letter-spacing:0;">(mega menu-তে দেখায়)</span></h3>
+        <h2 class="section-title"><span class="md-icon"><span class="ms">label</span></span>Manage Sub-Categories</h2>
         <div class="card">
-          <p style="font-size:13px;color:#6b6b6b;letter-spacing:.05em;margin-bottom:14px;">
+          <p style="font-size:13px;color:var(--md-on-surface-var);margin-bottom:14px;">
             যেকোনো main category-র অধীনে sub-category যোগ করুন (যেমন: খেলা → ক্রিকেট)।
             যোগ হলে mega menu-তে সাথে সাথে দেখাবে।
           </p>
 
-          <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
-            <select id="subCatParent" style="flex:1;min-width:160px;margin:0;"></select>
-            <input id="subCatName" placeholder="নতুন sub-category নাম (যেমন: ক্রিকেট)" style="flex:2;min-width:200px;margin:0;">
-            <button onclick="addSubCategory()" style="width:auto;padding:10px 20px;margin:0;">Add</button>
+          <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
+            <div class="field" style="flex:1;min-width:160px;margin:0;">
+              <select id="subCatParent" style="margin:0;"></select>
+              <label>Parent category</label>
+            </div>
+            <div class="field" style="flex:2;min-width:200px;margin:0;">
+              <input id="subCatName" placeholder=" ">
+              <label>নতুন sub-category নাম (যেমন: ক্রিকেট)</label>
+            </div>
+            <button class="btn-filled" onclick="addSubCategory()" style="height:56px;padding:0 24px;white-space:nowrap;"><span class="ms">add</span> Add</button>
           </div>
 
-          <div id="subCatList" style="margin-top:18px;"></div>
+          <hr class="md-divider">
+          <div id="subCatList" class="list"></div>
         </div>
       </section>
 
