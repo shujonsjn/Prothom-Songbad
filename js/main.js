@@ -116,7 +116,7 @@
       </article>`;
   }
 
-  /* Hero block — 1 big (left) + 1 tall medium card (right) */
+  /* Hero block — 1 big (left) + 1 tall medium card (right) with newspaper-style frame */
   function renderHero(news){
     if(news.length === 0) return "";
     const big   = news[0];
@@ -127,8 +127,9 @@
         <img src="${esc(big.image)}" alt="" loading="eager">
         ${big.video ? `<span class="hero-vid">▶</span>` : ""}
         <div class="hero-big-title">
+          <div class="hero-kicker">${esc(big.category || "সর্বশেষ")}</div>
           <h2>${esc(big.title)}</h2>
-          <div class="hero-big-meta">${esc(big.category)} • ${esc(timeAgo(big.created_at))}</div>
+          <div class="hero-big-meta"><span>${esc(timeAgo(big.created_at))}</span></div>
         </div>
       </article>`;
 
@@ -137,19 +138,29 @@
         <div class="hero-med-img">
           <img src="${esc(n.image)}" alt="" loading="lazy">
           ${n.video ? `<span class="hero-vid-sm">▶</span>` : ""}
+          <div class="hero-med-img-cap">ছবি: সংগৃহীত</div>
         </div>
-        <h3 class="hero-med-title">${esc(n.title)}</h3>
-        <p class="hero-med-excerpt">${esc((n.details || "").slice(0, 200))}…</p>
-        <div class="hero-med-meta">${esc(timeAgo(n.created_at))}</div>
+        <div class="hero-med-body">
+          <div class="hero-kicker-sm">${esc(n.category || "সর্বশেষ")}</div>
+          <h3 class="hero-med-title">${esc(n.title)}</h3>
+          <p class="hero-med-excerpt">${esc((n.details || "").slice(0, 180))}…</p>
+          <div class="hero-med-meta">${esc(timeAgo(n.created_at))}</div>
+        </div>
       </article>` : "";
 
     return `
-      <div class="hero-block">
-        <div class="hero-left">${bigHtml}</div>
-        <div class="hero-right">
-          ${medHtml(med1)}
+      <section class="hero-section">
+      <div class="section-bar">
+        <h2 class="section-title">প্রধান সংবাদ</h2>
+        <div class="section-bar-line"></div>
+      </div>
+        <div class="hero-block">
+          <div class="hero-left">${bigHtml}</div>
+          <div class="hero-right">
+            ${medHtml(med1)}
+          </div>
         </div>
-      </div>`;
+      </section>`;
   }
 
   /* "আরও পড়ুন" text-only list (one row per news) */
