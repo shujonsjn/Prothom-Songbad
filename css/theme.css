@@ -310,7 +310,7 @@ img{display:block;max-width:100%}
 
 /* Tall hero-med: single card filling the right column full height, image dominant like hero-big */
 .hero-med-tall{ height:100%; }
-.hero-med-tall .hero-med-img{ height:76%; min-height:0; aspect-ratio:auto; }
+.hero-med-tall .hero-med-img{ height:68%; min-height:0; aspect-ratio:auto; }
 .hero-med-tall .hero-med-title{ font-size:18px; line-height:1.4; padding:14px 14px 6px; }
 .hero-med-tall .hero-med-excerpt{ font-size:13px; line-height:1.55; max-height:calc(1.55em * 2); }
 .hero-vid-sm{
