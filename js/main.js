@@ -116,12 +116,11 @@
       </article>`;
   }
 
-  /* Hero block — 3 columns: 1 big (left) + 2 medium (middle, right) */
+  /* Hero block — 1 big (left) + 1 tall medium card (right) */
   function renderHero(news){
     if(news.length === 0) return "";
     const big   = news[0];
     const med1  = news[1];
-    const med2  = news[2];
 
     const bigHtml = `
       <article class="hero-big" onclick="openNews(${big.id})">
@@ -134,13 +133,13 @@
       </article>`;
 
     const medHtml = (n) => n ? `
-      <article class="hero-med" onclick="openNews(${n.id})">
+      <article class="hero-med hero-med-tall" onclick="openNews(${n.id})">
         <div class="hero-med-img">
           <img src="${esc(n.image)}" alt="" loading="lazy">
           ${n.video ? `<span class="hero-vid-sm">▶</span>` : ""}
         </div>
         <h3 class="hero-med-title">${esc(n.title)}</h3>
-        <p class="hero-med-excerpt">${esc((n.details || "").slice(0, 120))}…</p>
+        <p class="hero-med-excerpt">${esc((n.details || "").slice(0, 200))}…</p>
         <div class="hero-med-meta">${esc(timeAgo(n.created_at))}</div>
       </article>` : "";
 
@@ -149,7 +148,6 @@
         <div class="hero-left">${bigHtml}</div>
         <div class="hero-right">
           ${medHtml(med1)}
-          ${medHtml(med2)}
         </div>
       </div>`;
   }
