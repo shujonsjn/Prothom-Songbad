@@ -502,18 +502,16 @@ img{display:block;max-width:100%}
 
 .card-news{
   background:#ffffff;
-  border:1px solid #e8e2d4;
   border-radius:4px;
   overflow:hidden;
   cursor:pointer;
   display:flex;
   flex-direction:column;
-  transition: transform .2s, box-shadow .2s, border-color .2s;
+  transition: transform .2s, box-shadow .2s;
 }
 .card-news:hover{
   transform:translateY(-2px);
-  box-shadow:0 6px 18px rgba(0,0,0,.08);
-  border-color:#c1131d;
+  box-shadow:0 8px 22px rgba(0,0,0,.10);
 }
 
 .card-img{
