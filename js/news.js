@@ -137,23 +137,52 @@
     return html.replace(/^(\s*)([^\s<])/, (m, sp, ch) => `${sp}<span class="dropcap">${ch}</span>`);
   }
 
-  /* wraps the first character as dropcap, and the next 2-3 words as bolded lead-in.
-     Dropcap takes the FIRST char; the rest of the first word is preserved.
-     Lead-in covers the first 2-3 words including the rest of the first word. */
+  /* wraps the first grapheme (consonant + any combining vowel marks) as dropcap,
+     and the next 2-3 words as the lead-in phrase. Bengali vowel signs
+     (U+09BE–U+09CC) and combining marks must stay attached to their base. */
   function wrapFirstCharWithLead(html){
     if(!html) return "";
-    /* find first char boundary */
-    const m = html.match(/^(\s*)(\S)([\s\S]*)$/);
-    if(!m) return html;
-    const lead  = m[1];        // leading whitespace
-    const first = m[2];        // first character
-    const rest  = m[3];        // everything else
+
+    /* Use Intl.Segmenter to split into proper grapheme clusters */
+    let firstGrapheme = "";
+    let rest = html;
+    if(typeof Intl !== "undefined" && Intl.Segmenter){
+      try {
+        const seg = new Intl.Segmenter("bn", { granularity: "grapheme" });
+        const segs = [...seg.segment(html)];
+        /* skip leading whitespace graphemes */
+        let startIdx = 0;
+        while(startIdx < segs.length && !segs[startIdx].segment.trim()) startIdx++;
+        if(startIdx < segs.length){
+          firstGrapheme = segs[startIdx].segment;
+          rest = segs.slice(startIdx + 1).map(s => s.segment).join("");
+        }
+      } catch {
+        firstGrapheme = html.charAt(0);
+        rest = html.slice(1);
+      }
+    } else {
+      /* fallback: take 1st char + any Bengali combining marks following it */
+      const m = html.match(/^(\s*)(\S)([\u0980-\u09FF\s\S]*)$/);
+      if(m){
+        const lead  = m[1];
+        const first = m[2];
+        const tail  = m[3];
+        /* extend "first" to include Bengali vowel signs / combining marks */
+        const combRe = /[\u0980-\u0984\u09BC\u09BE-\u09CC\u09D7]/;
+        let extra = "";
+        let i = 0;
+        while(i < tail.length && combRe.test(tail[i])){ extra += tail[i++]; }
+        firstGrapheme = first + extra;
+        rest = lead + tail.slice(i);
+      }
+    }
+
+    if(!firstGrapheme) return html;
     /* take the first 2-3 words from `rest` to bold */
     const wordMatch = rest.match(/^([^\s]+(?:\s+[^\s]+){0,2})([\s\S]*)$/);
-    if(!wordMatch) return `${lead}<span class="dropcap">${first}</span>${rest}`;
-    const leadPhrase = wordMatch[1];
-    const tail       = wordMatch[2];
-    return `${lead}<span class="dropcap">${first}</span><span class="lede-lead">${leadPhrase}</span>${tail}`;
+    if(!wordMatch) return `<span class="dropcap">${firstGrapheme}</span>${rest}`;
+    return `<span class="dropcap">${firstGrapheme}</span><span class="lede-lead">${wordMatch[1]}</span>${wordMatch[2]}`;
   }
 
   function buildTags(n){
