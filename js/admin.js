@@ -226,11 +226,16 @@
   function renderCategorySelect(){
     const prev = category.value;
     category.innerHTML = "";
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = " ";
+    placeholder.disabled = true;
+    if(!prev) placeholder.selected = true;
+    category.appendChild(placeholder);
     if(categoriesCache.length === 0){
       const opt = document.createElement("option");
       opt.textContent = "— কোনো ক্যাটাগরি নেই —";
       opt.disabled = true;
-      opt.selected = true;
       category.appendChild(opt);
       return;
     }
@@ -406,6 +411,12 @@
     if(!subCatParent) return;
     const prev = subCatParent.value;
     subCatParent.innerHTML = "";
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = " ";
+    placeholder.disabled = true;
+    if(!prev) placeholder.selected = true;
+    subCatParent.appendChild(placeholder);
     const seen = new Set();
     for (const c of categoriesCache) {
       if (!c.category || seen.has(c.category)) continue;

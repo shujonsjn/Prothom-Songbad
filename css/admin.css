@@ -230,7 +230,9 @@ img{display:block;max-width:100%}
 .field textarea:focus + label,
 .field select:focus + label,
 .field input:not(:placeholder-shown) + label,
-.field textarea:not(:placeholder-shown) + label{
+.field textarea:not(:placeholder-shown) + label,
+.field select:not(:has(option[value=""]:checked)) + label,
+.field select:has(option:checked:not([value=""])) + label{
   transform:translateY(-26px) scale(.75);
   color:var(--md-primary);
   background:var(--md-surface-cont-lowest);
