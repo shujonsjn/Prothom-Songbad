@@ -1187,7 +1187,7 @@
           '<span class="ms">reply</span> Reply via mail client' +
         '</a>' +
         '<span class="inbox-meta-foot" style="font-size:11px;color:var(--md-on-surface-var);opacity:.7;align-self:center;">' +
-          'Source: ' + esc(m.source || "?") + (m.message_id ? " · ID: " + esc(m.message_id.slice(0,40)) : "") ) +
+          'Source: ' + esc(m.source || "?") + (m.message_id ? " · ID: " + esc(m.message_id.slice(0,40)) : "") +
         '</span>' +
       '</div>';
   }
