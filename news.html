@@ -10,15 +10,17 @@
 <link rel="apple-touch-icon" href="/img/apple-touch-icon.svg">
 <meta name="theme-color" content="#c1131d">
 
+<meta property="og:type" content="article">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Hind+Siliguri:wght@400;500;600;700&family=Noto+Serif+Bengali:wght@600;700;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=Hind+Siliguri:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Noto+Serif+Bengali:wght@400;500;600;700;900&display=swap" rel="stylesheet">
 
 <link rel="stylesheet" href="css/theme.css">
 
 </head>
 
-<body>
+<body class="news-paper">
 
 <header class="page-header">
   <a href="/index.html" class="logo-link" aria-label="প্রথম সংবাদ — Home">
@@ -32,24 +34,85 @@
 
 <div id="navDropdown" class="nav-dropdown" aria-hidden="true"></div>
 
-<article class="article">
+<div class="paper-wrap">
+  <article class="article" id="articleRoot">
 
-  <a href="index.html" class="back">← হোমে ফিরে যান</a>
+    <div class="article-rail">
+      <a href="index.html" class="back">
+        <span class="ms">arrow_back</span>
+        <span>হোমে ফিরে যান</span>
+      </a>
 
-  <div id="mediaSlot">
-    <img id="img" alt="">
-    <div id="videoWrap" class="video-wrap" hidden>
-      <div id="videoContainer"></div>
+      <div class="kicker" id="kicker">সর্বশেষ</div>
+      <h1 class="article-title" id="title">সংবাদ লোড হচ্ছে…</h1>
+      <p class="dek" id="dek"></p>
+
+      <div class="byline" id="byline">
+        <span class="byline-author" id="author">নিজস্ব প্রতিবেদক</span>
+        <span class="byline-dot">•</span>
+        <time id="time">আজ</time>
+        <span class="byline-dot">•</span>
+        <span id="readTime">৫ মিনিটে পড়া যাবে</span>
+      </div>
+
+      <figure class="article-figure" id="figure">
+        <div id="mediaSlot">
+          <img id="img" alt="">
+          <div id="videoWrap" class="video-wrap" hidden>
+            <div id="videoContainer"></div>
+          </div>
+        </div>
+        <figcaption id="caption"></figcaption>
+      </figure>
+
+      <div class="article-body" id="detailsWrap">
+        <p id="details" class="article-lede"></p>
+      </div>
+
+      <div class="article-foot">
+        <div class="tag-row" id="tagRow"></div>
+        <div class="share-row" id="shareRow">
+          <span class="share-label">শেয়ার করুন</span>
+          <a class="share-btn fb" id="shareFb" target="_blank" rel="noopener" aria-label="Facebook">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M22 12a10 10 0 1 0-11.6 9.9v-7H8v-2.9h2.4V9.7c0-2.4 1.4-3.7 3.6-3.7 1 0 2.1.2 2.1.2v2.3h-1.2c-1.2 0-1.5.7-1.5 1.5v1.9H16l-.4 2.9h-2.2v7A10 10 0 0 0 22 12z"/></svg>
+            <span>Facebook</span>
+          </a>
+          <a class="share-btn x" id="shareX" target="_blank" rel="noopener" aria-label="X">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M18.9 2H22l-7.4 8.5L23 22h-6.7l-5.3-6.9L4.9 22H1.7l8-9.1L1 2h6.9l4.8 6.3L18.9 2zm-1.1 18h1.8L7.2 4H5.3l12.5 16z"/></svg>
+            <span>X</span>
+          </a>
+          <a class="share-btn wa" id="shareWa" target="_blank" rel="noopener" aria-label="WhatsApp">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.5 15.3L2 22l4.9-1.4A10 10 0 1 0 12 2zm5.6 14.2c-.2.6-1.2 1.1-1.7 1.2-.4.1-1 .1-1.6-.1l-.4-.1c-.6-.2-1.3-.4-2.3-1-1.7-.9-2.7-2.7-2.8-2.8-.1-.1-.7-.9-.7-1.8s.5-1.3.6-1.5c.2-.2.4-.2.5-.2h.4c.1 0 .3 0 .4.3l.6 1.5c.1.2.1.3 0 .5l-.2.3-.3.3c-.1.1-.2.2 0 .4.1.2.6 1 1.3 1.6.9.8 1.7 1 1.9 1.1.2.1.4.1.5-.1l.6-.7c.1-.2.3-.2.4-.1l1.4.7c.2.1.3.2.4.3 0 .1 0 .7-.2 1.3z"/></svg>
+            <span>WhatsApp</span>
+          </a>
+          <button class="share-btn copy" id="shareCopy" type="button" aria-label="Copy link">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M16 1H4a2 2 0 0 0-2 2v14h2V3h12V1zm3 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm0 16H8V7h11v14z"/></svg>
+            <span>লিংক কপি</span>
+          </button>
+        </div>
+      </div>
     </div>
-  </div>
 
-  <h1 id="title"></h1>
+    <aside class="article-aside">
+      <div class="aside-card" id="relatedBlock">
+        <h3 class="aside-title"><span class="aside-rule"></span>এই ক্যাটাগরিতে আরও</h3>
+        <div class="related-list" id="relatedList"></div>
+      </div>
 
-  <div class="meta" id="meta">প্রকাশ: আজ</div>
+      <div class="aside-card aside-newsletter">
+        <h3 class="aside-title"><span class="aside-rule"></span>নিউজলেটার</h3>
+        <p class="aside-text">গুরুত্বপূর্ণ খবর সবার আগে পেতে চান? আমাদের নিউজলেটারে যোগ দিন।</p>
+        <a href="#" class="aside-cta"><span class="ms">mail</span> সাবস্ক্রাইব</a>
+      </div>
 
-  <p id="details"></p>
+      <div class="aside-card aside-trending">
+        <h3 class="aside-title"><span class="aside-rule"></span>সর্বাধিক পঠিত</h3>
+        <ol class="trending-list" id="trendingList"></ol>
+      </div>
+    </aside>
 
-</article>
+  </article>
+</div>
 
 <footer>
   <h2>প্রথম সংবাদ</h2>
