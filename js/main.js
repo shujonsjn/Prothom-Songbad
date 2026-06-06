@@ -248,13 +248,33 @@
     /* Slider: 3 pages × 3 news (news 4-12) */
     buildSlider(data);
 
-    /* আরও পড়ুন — only show on category page, with all data as list */
+    /* আরও পড়ুন — only show on category page, paginated 10-at-a-time */
     const readMore = document.getElementById("readMore");
     const readMoreWrap = document.getElementById("readMoreWrap");
+    const loadMoreBtn = document.getElementById("loadMore");
     if(readMore && readMoreWrap){
       if(activeCat && activeCat !== "all" && data.length > 0){
         readMoreWrap.style.display = "block";
-        readMore.innerHTML = data.map(renderListItem).join("");
+        let showCount = 10;
+        function paintReadMore(){
+          readMore.innerHTML = data.slice(0, showCount).map(renderListItem).join("");
+          if(loadMoreBtn){
+            if(showCount >= data.length){
+              loadMoreBtn.style.display = "none";
+            } else {
+              loadMoreBtn.style.display = "block";
+              const remaining = data.length - showCount;
+              loadMoreBtn.textContent = `আরও ${Math.min(10, remaining)}টি দেখান`;
+            }
+          }
+        }
+        paintReadMore();
+        if(loadMoreBtn){
+          loadMoreBtn.onclick = () => {
+            showCount = Math.min(showCount + 10, data.length);
+            paintReadMore();
+          };
+        }
       } else {
         readMoreWrap.style.display = "none";
       }
