@@ -975,7 +975,7 @@ body.news-paper{ background:#fafaf5; }
   transition:all .2s;
 }
 .back:hover{ background:#c1131d; }
-.back .ms{ font-size:16px; }
+.back svg{ display:block; }
 
 /* kicker — small red caps above headline */
 .kicker{
@@ -1306,7 +1306,7 @@ body.news-paper{ background:#fafaf5; }
   transition:background .2s;
 }
 .aside-cta:hover{ background:#fff; color:#c1131d; }
-.aside-cta .ms{ font-size:18px; }
+.aside-cta svg{ display:block; }
 
 /* trending numbered list */
 .trending-list{
