@@ -299,6 +299,80 @@
           </div>
         </div>`;
     });
+    loadSidebarBanners();
+  }
+
+  /* ===== Sidebar banners (public) ===== */
+  function renderBannerHtml(rows){
+    return rows.map(b => {
+      const link = b.link_url || "#";
+      const target = /^https?:\/\//i.test(link) && !link.startsWith(location.origin) ? ' target="_blank" rel="noopener"' : '';
+      return '<a class="sidebar-banner" href="' + esc(link) + '"' + target + ' data-pos="' + esc(b.position) + '">' +
+        '<span class="sidebar-banner-label">বিজ্ঞাপন</span>' +
+        '<img src="' + esc(b.image_url) + '" alt="' + esc(b.title || "ad") + '" loading="lazy">' +
+        (b.title ? '<span class="sidebar-banner-link">' + esc(b.title) + '</span>' : '') +
+      '</a>';
+    }).join("");
+  }
+
+  function loadSidebarBanners(){
+    /* fetch every position separately so the home page shows them all */
+    const positions = ["sidebar-top", "sidebar-bottom", "header", "footer", "inline"];
+    Promise.all(positions.map(pos =>
+      fetch("/api/banners?position=" + pos + "&_=" + Date.now())
+        .then(r => r.ok ? r.json() : [])
+        .catch(() => [])
+    )).then(([topRows, bottomRows, headerRows, footerRows, inlineRows]) => {
+      /* sidebar-top: inject above "সর্বাধিক পঠিত" */
+      const sidebar = document.querySelector(".sidebar");
+      let topWrap = document.getElementById("sidebarBannersTop");
+      if(!topWrap && sidebar){
+        topWrap = document.createElement("div");
+        topWrap.id = "sidebarBannersTop";
+        topWrap.className = "sidebar-banners";
+        const h3 = sidebar.querySelector("h3");
+        if(h3) h3.insertAdjacentElement("afterend", topWrap);
+        else   sidebar.insertBefore(topWrap, sidebar.firstChild);
+      }
+      if(topWrap){
+        topWrap.innerHTML = (topRows && topRows.length) ? renderBannerHtml(topRows) : "";
+      }
+      /* sidebar-bottom: existing slot below the news list */
+      const wrap = document.getElementById("sidebarBanners");
+      if(wrap){
+        wrap.innerHTML = (bottomRows && bottomRows.length) ? renderBannerHtml(bottomRows) : "";
+      }
+      /* header: top of page */
+      const hdr = document.getElementById("headerBanners");
+      if(hdr) hdr.innerHTML = (headerRows && headerRows.length) ? renderFullBannerHtml(headerRows) : "";
+      /* footer: bottom of page (above <footer> element) */
+      const ftr = document.getElementById("footerBanners");
+      if(ftr) ftr.innerHTML = (footerRows && footerRows.length) ? renderFullBannerHtml(footerRows) : "";
+      /* inline: between main content blocks */
+      const inl1 = document.getElementById("inlineBanner1");
+      if(inl1){
+        const html = (inlineRows && inlineRows.length) ? renderFullBannerHtml(inlineRows) : "";
+        inl1.innerHTML = html;
+        inl1.style.display = html ? "" : "none";
+      }
+      const inl2 = document.getElementById("inlineBanner2");
+      if(inl2){
+        const html = (inlineRows && inlineRows.length) ? renderFullBannerHtml(inlineRows) : "";
+        inl2.innerHTML = html;
+        inl2.style.display = html ? "" : "none";
+      }
+    });
+  }
+
+  function renderFullBannerHtml(rows){
+    return rows.map(b => {
+      const link = b.link_url || "#";
+      const target = /^https?:\/\//i.test(link) && !link.startsWith(location.origin) ? ' target="_blank" rel="noopener"' : '';
+      return '<a class="full-banner" href="' + esc(link) + '"' + target + ' data-pos="' + esc(b.position) + '">' +
+        '<span class="full-banner-label">বিজ্ঞাপন</span>' +
+        '<img src="' + esc(b.image_url) + '" alt="' + esc(b.title || "ad") + '" loading="lazy">' +
+      '</a>';
+    }).join("");
   }
 
   /* ===== Fetch from API ===== */
@@ -306,6 +380,16 @@
   if(activeCat && activeCat !== "all") qp.set("category", activeCat);
   if(activeSub)                       qp.set("sub", activeSub);
   const apiUrl = "/api/news" + (qp.toString() ? "?" + qp.toString() : "");
+
+  /* page-view tracking (fire-and-forget) */
+  try {
+    const body = JSON.stringify({ path: window.location.pathname + window.location.search });
+    if (navigator.sendBeacon) {
+      navigator.sendBeacon("/api/track-view", new Blob([body], { type: "application/json" }));
+    } else {
+      fetch("/api/track-view", { method: "POST", headers: { "Content-Type": "application/json" }, body, keepalive: true }).catch(() => {});
+    }
+  } catch {}
 
   fetch(apiUrl)
     .then(r => r.ok ? r.json() : Promise.reject(new Error("HTTP " + r.status)))

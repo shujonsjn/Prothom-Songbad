@@ -23,8 +23,24 @@
       document.getElementById("details").innerText = n.details || "";
       document.getElementById("meta").innerText   = "প্রকাশ: " + (n.time || "আজ");
       renderVideo(n.video);
+      trackView(id);
     })
     .catch(() => showError("সংবাদ লোড করা যায়নি"));
+
+  /* page-view tracking (fire-and-forget) */
+  function trackView(newsId){
+    try {
+      const body = JSON.stringify({
+        newsId: Number(newsId) || null,
+        path:   "/news.html?id=" + newsId
+      });
+      if (navigator.sendBeacon) {
+        navigator.sendBeacon("/api/track-view", new Blob([body], { type: "application/json" }));
+      } else {
+        fetch("/api/track-view", { method: "POST", headers: { "Content-Type": "application/json" }, body, keepalive: true }).catch(() => {});
+      }
+    } catch {}
+  }
 
   /* YouTube/Vimeo URL → embed URL; raw .mp4/.m3u8 → সরাসরি <video> */
   function toEmbedInfo(url) {

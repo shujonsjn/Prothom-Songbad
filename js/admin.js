@@ -6,6 +6,10 @@
 
   let credentials = null;   // { u, p }
   let editId      = null;   // currently edited news id
+  let categoriesCache = [];
+  let subCatsCache    = [];
+  let newsCache       = [];
+  let _filters        = { cat: "", sub: "", q: "" };
 
   /* native alert() override → use toast if available, fallback to alert */
   const _origAlert = window.alert.bind(window);
@@ -30,9 +34,6 @@
   const catList  = document.getElementById("catList");
   const newCat   = document.getElementById("newCat");
   const addSubInline = document.getElementById("addSubInline");
-
-  let categoriesCache = [];
-  let subCatsCache    = [];
 
   function authHeader(){
     return { "Authorization": "Basic " + btoa(credentials.u + ":" + credentials.p) };
@@ -62,6 +63,8 @@
         loginBox.style.display = "none";
         admin.style.display    = "block";
         load();
+        setTimeout(() => { try { loadDashboard(); } catch(e){ console.warn("dashboard:", e); } }, 50);
+        setTimeout(() => { try { loadProfile(); } catch(e){ console.warn("profile:", e); } }, 200);
       })
       .catch(err => {
         alert("Login failed: " + err.message);
@@ -98,22 +101,182 @@
     a.addEventListener("click", (e) => {
       e.preventDefault();
       const name = a.getAttribute("data-section");
-      if (name) showSection(name);
+      if (name) {
+        showSection(name);
+        if (name === "dashboard") loadDashboard();
+      }
     });
   });
+
+  /* ===== DASHBOARD ===== */
+  let _dashRange = "24h";
+  let _chartViews = null;
+  let _chartCategory = null;
+  function fmtNum(n){
+    n = Number(n) || 0;
+    if (n >= 1000) return (n/1000).toFixed(n >= 10000 ? 0 : 1) + "k";
+    return String(n);
+  }
+  function rangeLabel(r){
+    return ({ "24h":"Last 24h", "7d":"Last 7 days", "30d":"Last 30 days", "all":"All time" })[r] || r;
+  }
+  document.querySelectorAll(".range-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".range-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      _dashRange = btn.getAttribute("data-range");
+      loadDashboard();
+    });
+  });
+
+  function loadDashboard(){
+    if (typeof Chart === "undefined") return;
+    const rangeLbl = document.getElementById("dashRangeLabel");
+    if (rangeLbl) rangeLbl.textContent = rangeLabel(_dashRange);
+
+    fetch("/api/analytics?range=" + encodeURIComponent(_dashRange), { headers: authHeader() })
+      .then(r => r.ok ? r.json() : Promise.reject(new Error("HTTP " + r.status)))
+      .then(data => {
+        /* stat values */
+        const map = data.totals || {};
+        document.querySelectorAll("[data-k]").forEach(el => {
+          const k = el.getAttribute("data-k");
+          el.textContent = fmtNum(map[k]);
+        });
+
+        /* Views over time chart */
+        const vc = document.getElementById("chartViews");
+        if (vc) {
+          const labels = (data.viewsByDay || []).map(r => r.bucket);
+          const values = (data.viewsByDay || []).map(r => r.c);
+          const labelsP = (data.postsByDay || []).map(r => r.bucket);
+          const valuesP = (data.postsByDay || []).map(r => r.c);
+          const postsByBucket = {};
+          labelsP.forEach((b, i) => postsByBucket[b] = valuesP[i]);
+
+          if (_chartViews) _chartViews.destroy();
+          _chartViews = new Chart(vc.getContext("2d"), {
+            type: "line",
+            data: {
+              labels: labels,
+              datasets: [
+                {
+                  label: "Views",
+                  data: values,
+                  borderColor: "#6750a4",
+                  backgroundColor: "rgba(103,80,164,.12)",
+                  borderWidth: 2.5,
+                  tension: .35,
+                  fill: true,
+                  pointRadius: 3,
+                  pointHoverRadius: 6,
+                  pointBackgroundColor: "#6750a4"
+                },
+                {
+                  label: "Posts",
+                  data: labels.map(b => postsByBucket[b] || 0),
+                  borderColor: "#b3261e",
+                  backgroundColor: "rgba(179,38,30,.10)",
+                  borderWidth: 2,
+                  tension: .3,
+                  fill: false,
+                  pointRadius: 3,
+                  pointHoverRadius: 5,
+                  pointBackgroundColor: "#b3261e"
+                }
+              ]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              interaction: { mode: "index", intersect: false },
+              plugins: {
+                legend: { position: "bottom", labels: { boxWidth: 12, font: { size: 11 } } },
+                tooltip: { backgroundColor: "#322f35", titleFont:{ size:12 }, bodyFont:{ size:12 } }
+              },
+              scales: {
+                x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+                y: { beginAtZero: true, ticks: { precision: 0, font: { size: 10 } }, grid: { color: "rgba(0,0,0,.05)" } }
+              }
+            }
+          });
+        }
+
+        /* Category donut */
+        const cc = document.getElementById("chartCategory");
+        if (cc) {
+          const cats = (data.byCategory || []).filter(c => c.posts > 0);
+          const palette = ["#b3261e","#6750a4","#0058a3","#1b5e20","#7c3a00","#7d5260","#1a237e","#00695c","#ad1457","#283593"];
+          if (_chartCategory) _chartCategory.destroy();
+          _chartCategory = new Chart(cc.getContext("2d"), {
+            type: "doughnut",
+            data: {
+              labels: cats.map(c => c.category),
+              datasets: [{
+                data: cats.map(c => c.posts),
+                backgroundColor: cats.map((_, i) => palette[i % palette.length]),
+                borderColor: "#fff",
+                borderWidth: 2
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              cutout: "62%",
+              plugins: {
+                legend: { position: "right", labels: { boxWidth: 12, font: { size: 11 } } },
+                tooltip: { backgroundColor: "#322f35" }
+              }
+            }
+          });
+        }
+
+        /* Top viewed list */
+        const top = document.getElementById("rankTop");
+        if (top) {
+          const rows = data.topNews || [];
+          if (rows.length === 0) {
+            top.innerHTML = '<li class="empty-state">এই সময়ে কোনো view নেই</li>';
+          } else {
+            top.innerHTML = rows.map((r, i) => {
+              const rankCls = i < 3 ? " top-" + (i+1) : "";
+              return '<li>' +
+                '<span class="rank-num' + rankCls + '">' + (i+1) + '</span>' +
+                '<div class="rank-text">' + esc(r.title) +
+                  '<small>' + esc(r.category || "—") + (r.subcategory ? " › " + esc(r.subcategory) : "") + '</small>' +
+                '</div>' +
+                '<span class="rank-views"><span class="ms">visibility</span> ' + fmtNum(r.views) + '</span>' +
+              '</li>';
+            }).join("");
+          }
+        }
+
+        /* Recent activity list */
+        const rec = document.getElementById("rankRecent");
+        if (rec) {
+          const rows = data.recent || [];
+          if (rows.length === 0) {
+            rec.innerHTML = '<li class="empty-state">এই সময়ে নতুন পোস্ট নেই</li>';
+          } else {
+            rec.innerHTML = rows.map((r, i) => {
+              const rankCls = i < 3 ? " top-" + (i+1) : "";
+              return '<li>' +
+                '<span class="rank-num' + rankCls + '"><span class="ms">article</span></span>' +
+                '<div class="rank-text">' + esc(r.title) +
+                  '<small>' + esc(r.category || "—") + ' · ' + esc((r.created_at || "").slice(0,16)) + '</small>' +
+                '</div>' +
+              '</li>';
+            }).join("");
+          }
+        }
+      })
+      .catch(err => console.error("Dashboard load failed:", err));
+  }
 
   function refreshSidebarCounts(){
     if(cntPostsEl) cntPostsEl.textContent = (list && list.children.length) || 0;
     if(cntCatsEl)  cntCatsEl.textContent  = categoriesCache.length || 0;
     if(cntSubsEl)  cntSubsEl.textContent  = (subCatsCache || []).length || 0;
-    const statPostsEl = document.getElementById("statPosts");
-    const statCatsEl  = document.getElementById("statCats");
-    const statSubsEl  = document.getElementById("statSubs");
-    const statVidsEl  = document.getElementById("statVids");
-    if(statPostsEl) statPostsEl.textContent = (list && list.children.length) || 0;
-    if(statCatsEl)  statCatsEl.textContent  = categoriesCache.length || 0;
-    if(statSubsEl)  statSubsEl.textContent  = (subCatsCache || []).length || 0;
-    if(statVidsEl)  statVidsEl.textContent  = (list ? list.querySelectorAll("[data-vid='1']").length : 0);
   }
 
   /* ===== M3 SNACKBAR ===== */
@@ -194,7 +357,8 @@
       })
       .then(rows => {
         if(!rows) return;
-        render(rows);
+        newsCache = rows;
+        renderFiltered();
         refreshSidebarCounts();
       })
       .catch(err => alert("Load failed: " + err.message));
@@ -524,15 +688,7 @@
       .catch(err => alert("Delete failed: " + err.message));
   }
 
-  /* Refresh sub-cat parent dropdown when categories change */
-  const _origLoadCategories = loadCategories;
-  loadCategories = function(){
-    _origLoadCategories();
-    /* এই wrapper loadCategories এর return Promise ধরে না;
-       original function explicit return করে না, তাই .then() চেইন করা যায় না।
-       renderSubCatParent আগে থেকেই original এ কল হয়, তাই এখানে আর
-       কিছু করার দরকার নেই। */
-  };
+  /* (filter wrappers defined further below) */
 
   function render(rows){
     list.innerHTML = "";
@@ -557,6 +713,133 @@
     });
   }
 
+  /* ===== STORIES FILTER ===== */
+  const filterCatEl    = document.getElementById("filterCat");
+  const filterSubEl    = document.getElementById("filterSub");
+  const filterSearchEl = document.getElementById("filterSearch");
+  const filterResetEl  = document.getElementById("filterReset");
+  const storiesCountEl = document.getElementById("storiesCount");
+
+  function populateFilterCat(){
+    if(!filterCatEl) return;
+    const prev = filterCatEl.value;
+    filterCatEl.innerHTML = '<option value="" disabled selected> </option>';
+    categoriesCache.forEach(c => {
+      const o = document.createElement("option");
+      o.value = c.category;
+      o.textContent = c.category;
+      filterCatEl.appendChild(o);
+    });
+    if(prev && categoriesCache.some(c => c.category === prev)) filterCatEl.value = prev;
+  }
+  function populateFilterSub(){
+    if(!filterSubEl) return;
+    const prev = filterSubEl.value;
+    filterSubEl.innerHTML = '<option value="" disabled selected> </option>';
+    if(!_filters.cat){
+      filterSubEl.disabled = true;
+      filterSubEl.value = "";
+      return;
+    }
+    filterSubEl.disabled = false;
+    const matching = (subCatsCache || []).filter(s => s.category === _filters.cat);
+    if(matching.length === 0){
+      const o = document.createElement("option");
+      o.value = "";
+      o.textContent = "(no sub-categories)";
+      o.disabled = true;
+      filterSubEl.appendChild(o);
+    } else {
+      matching.forEach(s => {
+        const o = document.createElement("option");
+        o.value = s.name;
+        o.textContent = s.name;
+        filterSubEl.appendChild(o);
+      });
+    }
+    if(prev && (matching.some(s => s.name === prev) || !prev)) filterSubEl.value = prev;
+  }
+
+  function renderFiltered(){
+    let rows = newsCache.slice();
+    if(_filters.cat) rows = rows.filter(r => r.category === _filters.cat);
+    if(_filters.sub) rows = rows.filter(r => (r.subcategory || "") === _filters.sub);
+    if(_filters.q){
+      const q = _filters.q.toLowerCase();
+      rows = rows.filter(r => (r.title || "").toLowerCase().includes(q) || (r.category || "").toLowerCase().includes(q) || (r.subcategory || "").toLowerCase().includes(q));
+    }
+    render(rows);
+    if(storiesCountEl){
+      const total = newsCache.length;
+      const shown = rows.length;
+      const filterActive = _filters.cat || _filters.sub || _filters.q;
+      storiesCountEl.innerHTML = filterActive
+        ? '<b>' + shown + '</b> / ' + total + ' <span style="opacity:.6;font-weight:500;">filtered</span>'
+        : '<b>' + total + '</b> <span style="opacity:.6;font-weight:500;">stories</span>';
+    }
+  }
+
+  if(filterCatEl){
+    filterCatEl.addEventListener("change", () => {
+      _filters.cat = filterCatEl.value;
+      _filters.sub = "";
+      populateFilterSub();
+      renderFiltered();
+    });
+  }
+  if(filterSubEl){
+    filterSubEl.addEventListener("change", () => {
+      _filters.sub = filterSubEl.value;
+      renderFiltered();
+    });
+  }
+  if(filterSearchEl){
+    let _searchT;
+    filterSearchEl.addEventListener("input", () => {
+      clearTimeout(_searchT);
+      _searchT = setTimeout(() => {
+        _filters.q = filterSearchEl.value.trim();
+        renderFiltered();
+      }, 180);
+    });
+  }
+  if(filterResetEl){
+    filterResetEl.addEventListener("click", () => {
+      _filters = { cat: "", sub: "", q: "" };
+      if(filterCatEl) filterCatEl.value = "";
+      if(filterSearchEl) filterSearchEl.value = "";
+      populateFilterSub();
+      renderFiltered();
+    });
+  }
+
+  /* re-populate filter dropdowns whenever categories/subcats change */
+  const _origLoadCategories2 = loadCategories;
+  loadCategories = function(){
+    _origLoadCategories2();
+    /* poll categoriesCache until populated (max ~3s) */
+    let tries = 0;
+    const t = setInterval(() => {
+      tries++;
+      if(categoriesCache.length > 0 || tries > 30){
+        clearInterval(t);
+        populateFilterCat();
+      }
+    }, 100);
+  };
+  const _origLoadSubCats = loadSubCategories;
+  loadSubCategories = function(){
+    _origLoadSubCats();
+    let tries = 0;
+    const t = setInterval(() => {
+      tries++;
+      if(subCatsCache.length > 0 || tries > 30){
+        clearInterval(t);
+        populateFilterSub();
+      }
+    }, 100);
+  };
+
   /* ===== EDIT ===== */
   window.edit = function(id){
     fetch("/api/news/" + id, { headers: authHeader() })
@@ -576,11 +859,26 @@
         document.getElementById("video").value     = n.video || "";
         editId         = id;
         img.value      = "";
-        const card = document.querySelector(".card h3");
-        if(card) card.innerText = "Editing: " + (n.title.length > 40 ? n.title.slice(0,40) + "." : n.title);
+        const card = document.getElementById("formCardTitle");
+        if(card) card.innerHTML = '<span class="md-icon"><span class="ms">edit</span></span>এডিট: ' + esc(n.title.length > 40 ? n.title.slice(0,40) + "…" : n.title);
+        const pubBtn = document.querySelector('button[onclick="save()"]');
+        if(pubBtn) pubBtn.innerHTML = '<span class="ms">update</span> আপডেট করুন';
+        let cancelBtn = document.getElementById("cancelEditBtn");
+        if(!cancelBtn){
+          cancelBtn = document.createElement("button");
+          cancelBtn.id = "cancelEditBtn";
+          cancelBtn.type = "button";
+          cancelBtn.className = "btn-outlined btn-block";
+          cancelBtn.style.marginTop = "8px";
+          cancelBtn.innerHTML = '<span class="ms">close</span> এডিট বাতিল';
+          cancelBtn.onclick = () => { clear(); };
+          pubBtn?.parentNode?.insertBefore(cancelBtn, pubBtn?.nextSibling);
+        }
+        showSection("posts");
         window.scrollTo({ top: 0, behavior: "smooth" });
+        toast("এডিট মোড: " + n.title.slice(0, 36) + (n.title.length > 36 ? "…" : ""));
       })
-      .catch(err => alert("Edit load failed: " + err.message));
+      .catch(err => toast("Edit load failed: " + err.message, "error"));
   };
 
   /* ===== DELETE ===== */
@@ -607,15 +905,278 @@
     const iu = document.getElementById("imageUrl");     if(iu) iu.value = "";
     const vv = document.getElementById("video");        if(vv) vv.value = "";
     if(subcat){
-      /* category select রাখি, শুধু subcat empty করে dropdown refresh করি */
       renderSubcategorySelect();
     }
     editId        = null;
-    const card = document.querySelector(".card h3");
-    if(card) card.innerText = "Add / Edit News";
+    const card = document.getElementById("formCardTitle");
+    if(card) card.innerHTML = '<span class="md-icon"><span class="ms">post_add</span></span>Add / Edit News';
+    const pubBtn = document.querySelector('button[onclick="save()"]');
+    if(pubBtn) pubBtn.innerHTML = '<span class="ms">publish</span> Publish';
+    const cancelBtn = document.getElementById("cancelEditBtn");
+    if(cancelBtn) cancelBtn.remove();
   }
 
   /* expose to window for inline handlers */
   window.clear = clear;
+
+  /* ===== PROFILE ===== */
+  window.loadProfile = function(){
+    const note = document.getElementById("profileNote");
+    if(note){ note.style.display = "none"; note.classList.remove("ok"); note.innerHTML = ""; }
+    fetch("/api/admin/profile", { headers: authHeader() })
+      .then(r => r.ok ? r.json() : Promise.reject(new Error("HTTP " + r.status)))
+      .then(p => {
+        document.getElementById("pUsername").value    = p.username || "";
+        document.getElementById("pDisplayName").value = p.display_name || "";
+        document.getElementById("profileName").textContent = p.display_name || p.username || "Admin";
+        document.getElementById("profileRole").textContent = p.role || "admin";
+        const created = p.created_at ? p.created_at.slice(0,16).replace("T"," ") : "—";
+        const last    = p.last_login  ? p.last_login.slice(0,16).replace("T"," ") : "—";
+        const src     = p.source === "env" ? " · (env-managed)" : "";
+        document.getElementById("profileMeta").innerHTML =
+          '<span><span class="ms">schedule</span> joined ' + esc(created) + '</span>' +
+          '<span><span class="ms">login</span> last login ' + esc(last) + '</span>' +
+          (src ? '<span style="opacity:.7;">' + esc(src) + '</span>' : '');
+        /* also update sidebar admin name + role + avatar */
+        const sbName = document.getElementById("sbUserName");
+        if(sbName) sbName.textContent = p.display_name || p.username || "Admin";
+        const sbRole = document.getElementById("sbUserRole");
+        if(sbRole) sbRole.textContent = p.role || "admin";
+        const sbAv = document.getElementById("sbAvatar");
+        if(sbAv){
+          const letter = (p.display_name || p.username || "A").trim().charAt(0).toUpperCase();
+          sbAv.textContent = letter;
+        }
+      })
+      .catch(err => {
+        if(note){
+          note.style.display = "block";
+          note.classList.remove("ok");
+          note.textContent = "Profile load failed: " + err.message;
+        }
+      });
+  };
+
+  window.saveProfile = function(){
+    const note = document.getElementById("profileNote");
+    const u = document.getElementById("pUsername").value.trim();
+    const dn = document.getElementById("pDisplayName").value.trim();
+    const cur = document.getElementById("pCurrentPass").value;
+    const np  = document.getElementById("pNewPass").value;
+    const cp  = document.getElementById("pConfirmPass").value;
+
+    if(!u){ return showNote(note, false, "Username দিতে হবে"); }
+    if(np && np !== cp){ return showNote(note, false, "নতুন password দুটি মিলছে না"); }
+    if(np && !cur){ return showNote(note, false, "Password বদলাতে হলে current password দিতে হবে"); }
+
+    const body = { username: u, display_name: dn };
+    if(np){ body.current_password = cur; body.new_password = np; }
+
+    fetch("/api/admin/profile", {
+      method: "PUT",
+      headers: { ...authHeader(), "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    })
+      .then(async r => {
+        const j = await r.json().catch(() => ({}));
+        if(!r.ok) throw new Error(j.error || ("HTTP " + r.status));
+        return j;
+      })
+      .then(j => {
+        /* if username changed, must re-authenticate */
+        if(j.username && j.username !== credentials.u){
+          toast("Username পরিবর্তন হয়েছে — নতুন username দিয়ে login করুন");
+          setTimeout(() => logout(), 1500);
+        } else {
+          toast("Profile saved ✓");
+          document.getElementById("pCurrentPass").value = "";
+          document.getElementById("pNewPass").value = "";
+          document.getElementById("pConfirmPass").value = "";
+          loadProfile();
+        }
+      })
+      .catch(err => showNote(note, false, err.message));
+  };
+
+  function showNote(el, ok, msg){
+    if(!el) return;
+    el.style.display = "block";
+    el.classList.toggle("ok", !!ok);
+    el.textContent = msg;
+  }
+
+  /* Load profile when profile section opens */
+  document.querySelectorAll('.sb-link[data-section="profile"]').forEach(a => {
+    a.addEventListener("click", (e) => {
+      e.preventDefault();
+      showSection("profile");
+      loadProfile();
+    });
+  });
+
+  /* ===== BANNERS / ADS ===== */
+  let _bannersCache = [];
+  let _editingBannerId = null;
+
+  const bnPosSel   = document.getElementById("bnPosition");
+  const bnTitleEl  = document.getElementById("bnTitle");
+  const bnOrderEl  = document.getElementById("bnOrder");
+  const bnImageEl  = document.getElementById("bnImage");
+  const bnLinkEl   = document.getElementById("bnLink");
+  const bnActiveEl = document.getElementById("bnActive");
+  const bnSaveBtn  = document.getElementById("bnSaveBtn");
+  const bnPreviewWrap = document.getElementById("bnPreview");
+  const bnPreviewImg  = document.getElementById("bnPreviewImg");
+  const bnFilterPos   = document.getElementById("bnFilterPos");
+  const bannerList    = document.getElementById("bannerList");
+  const cntBannersEl  = document.getElementById("cntBanners");
+
+  function updateBannerPreview(){
+    const url = (bnImageEl?.value || "").trim();
+    if(url && /^https?:\/\//i.test(url)){
+      bnPreviewWrap.style.display = "block";
+      bnPreviewImg.src = url;
+    } else {
+      bnPreviewWrap.style.display = "none";
+    }
+  }
+  if(bnImageEl) bnImageEl.addEventListener("input", updateBannerPreview);
+
+  function resetBannerForm(){
+    _editingBannerId = null;
+    if(bnSaveBtn) bnSaveBtn.innerHTML = '<span class="ms">add</span> Add Banner';
+    if(bnPosSel)   bnPosSel.value = "sidebar-bottom";
+    if(bnTitleEl)  bnTitleEl.value = "";
+    if(bnOrderEl)  bnOrderEl.value = "0";
+    if(bnImageEl)  bnImageEl.value = "";
+    if(bnLinkEl)   bnLinkEl.value = "";
+    if(bnActiveEl) bnActiveEl.checked = true;
+    if(bnPreviewWrap) bnPreviewWrap.style.display = "none";
+  }
+  window.resetBannerForm = resetBannerForm;
+
+  function renderBannerList(rows){
+    if(!bannerList) return;
+    const pos = bnFilterPos?.value || "";
+    const filtered = pos ? rows.filter(r => r.position === pos) : rows;
+    if(filtered.length === 0){
+      bannerList.innerHTML = '<div class="banner-empty"><span class="ms">image_not_supported</span>' +
+        (pos ? "এই position-এ কোনো banner নেই" : "কোনো banner যোগ করা হয়নি — উপরের form থেকে যোগ করুন") + '</div>';
+      return;
+    }
+    bannerList.innerHTML = filtered.map(b => {
+      const off = !b.active ? " off" : "";
+      const title = b.title || "(no title)";
+      const safeTitle = esc(title);
+      const safePos = esc(b.position);
+      const safeUrl = esc(b.image_url);
+      const safeLink = esc(b.link_url || "");
+      return `<div class="banner-card${off}">` +
+        `<div class="banner-card-img">` +
+          (b.image_url
+            ? `<img src="${safeUrl}" alt="${safeTitle}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><span class="ms" style="display:none;">broken_image</span>`
+            : `<span class="ms">image</span>`) +
+        `</div>` +
+        `<div class="banner-card-body">` +
+          `<div class="banner-card-pos"><span class="ms" style="font-size:12px;">place</span>${safePos}</div>` +
+          `<div class="banner-card-title" title="${safeTitle}">${safeTitle}</div>` +
+          (b.link_url ? `<div style="font-size:11px;color:var(--md-on-surface-var);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${safeLink}">→ ${safeLink}</div>` : '') +
+          `<div class="banner-card-actions">` +
+            `<button class="btn-text" onclick="editBanner(${b.id})" type="button"><span class="ms" style="font-size:14px;">edit</span> Edit</button>` +
+            `<button class="btn-text" onclick="toggleBanner(${b.id}, ${b.active ? 0 : 1})" type="button"><span class="ms" style="font-size:14px;">${b.active ? 'pause' : 'play_arrow'}</span> ${b.active ? 'Off' : 'On'}</button>` +
+            `<button class="btn-text" style="color:var(--md-error);" onclick="deleteBanner(${b.id})" type="button"><span class="ms" style="font-size:14px;">delete</span> Del</button>` +
+          `</div>` +
+        `</div>` +
+      `</div>`;
+    }).join("");
+  }
+
+  function loadBanners(){
+    fetch("/api/banners", { headers: authHeader() })
+      .then(r => r.ok ? r.json() : Promise.reject(new Error("HTTP " + r.status)))
+      .then(rows => {
+        _bannersCache = rows;
+        renderBannerList(rows);
+        if(cntBannersEl) cntBannersEl.textContent = rows.length || 0;
+      })
+      .catch(err => toast("Banners load failed: " + err.message, "error"));
+  }
+  window.loadBanners = loadBanners;
+
+  window.saveBanner = function(){
+    const body = {
+      position: bnPosSel?.value || "sidebar-bottom",
+      title: bnTitleEl?.value || "",
+      image_url: bnImageEl?.value || "",
+      link_url: bnLinkEl?.value || "",
+      active: !!bnActiveEl?.checked,
+      sort_order: Number(bnOrderEl?.value || 0)
+    };
+    if(!body.image_url || !/^https?:\/\//i.test(body.image_url)){
+      return toast("Image URL দিতে হবে (http/https দিয়ে শুরু হতে হবে)", "error");
+    }
+    const isEdit = _editingBannerId !== null;
+    const url = isEdit ? "/api/banners/" + _editingBannerId : "/api/banners";
+    fetch(url, {
+      method: isEdit ? "PUT" : "POST",
+      headers: { ...authHeader(), "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    })
+      .then(async r => {
+        const j = await r.json().catch(() => ({}));
+        if(!r.ok) throw new Error(j.error || ("HTTP " + r.status));
+        return j;
+      })
+      .then(() => {
+        toast(isEdit ? "Banner updated ✓" : "Banner added ✓");
+        resetBannerForm();
+        loadBanners();
+      })
+      .catch(err => toast("Save failed: " + err.message, "error"));
+  };
+
+  window.editBanner = function(id){
+    const b = _bannersCache.find(x => x.id === id);
+    if(!b) return;
+    _editingBannerId = id;
+    if(bnPosSel)   bnPosSel.value = b.position;
+    if(bnTitleEl)  bnTitleEl.value = b.title || "";
+    if(bnOrderEl)  bnOrderEl.value = b.sort_order || 0;
+    if(bnImageEl)  bnImageEl.value = b.image_url || "";
+    if(bnLinkEl)   bnLinkEl.value = b.link_url || "";
+    if(bnActiveEl) bnActiveEl.checked = !!b.active;
+    if(bnSaveBtn)  bnSaveBtn.innerHTML = '<span class="ms">save</span> Update Banner';
+    updateBannerPreview();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  window.toggleBanner = function(id, newActive){
+    fetch("/api/banners/" + id, {
+      method: "PUT",
+      headers: { ...authHeader(), "Content-Type": "application/json" },
+      body: JSON.stringify({ active: newActive })
+    })
+      .then(r => r.ok ? r.json() : Promise.reject(new Error("HTTP " + r.status)))
+      .then(() => { toast(newActive ? "Banner activated" : "Banner deactivated"); loadBanners(); })
+      .catch(err => toast("Toggle failed: " + err.message, "error"));
+  };
+
+  window.deleteBanner = function(id){
+    if(!confirm("এই banner মুছে ফেলতে চান?")) return;
+    fetch("/api/banners/" + id, { method: "DELETE", headers: authHeader() })
+      .then(r => r.ok ? r.json() : Promise.reject(new Error("HTTP " + r.status)))
+      .then(() => { toast("Banner deleted"); loadBanners(); })
+      .catch(err => toast("Delete failed: " + err.message, "error"));
+  };
+
+  if(bnFilterPos) bnFilterPos.addEventListener("change", () => renderBannerList(_bannersCache));
+
+  document.querySelectorAll('.sb-link[data-section="banners"]').forEach(a => {
+    a.addEventListener("click", (e) => {
+      e.preventDefault();
+      showSection("banners");
+      loadBanners();
+    });
+  });
 
 })();

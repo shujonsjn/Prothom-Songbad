@@ -10,6 +10,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Roboto+Slab:wght@500;600;700&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
 <link rel="stylesheet" href="css/admin.css">
 
 <style>
@@ -53,16 +55,20 @@
 
     <!-- LEFT SIDEBAR — menu -->
     <aside class="admin-sidebar">
-      <div class="sb-user">
-        <div class="sb-avatar">A</div>
-        <div class="sb-user-info">
-          <b id="sbUserName">admin</b>
-          <small>Editor</small>
-        </div>
+    <div class="sb-user">
+      <div class="sb-avatar" id="sbAvatar">A</div>
+      <div class="sb-user-info">
+        <b id="sbUserName">admin</b>
+        <small id="sbUserRole">Editor</small>
       </div>
+    </div>
 
       <nav class="sb-menu">
-        <a href="#" class="sb-link active" data-section="posts">
+        <a href="#" class="sb-link active" data-section="dashboard">
+          <span class="sb-icon"><span class="ms">dashboard</span></span>
+          <span class="sb-label">Dashboard</span>
+        </a>
+        <a href="#" class="sb-link" data-section="posts">
           <span class="sb-icon"><span class="ms">article</span></span>
           <span class="sb-label">Posts / News</span>
           <span class="sb-count" id="cntPosts">–</span>
@@ -80,6 +86,15 @@
           <span class="sb-icon"><span class="ms">label</span></span>
           <span class="sb-label">Sub-Categories</span>
           <span class="sb-count" id="cntSubs">–</span>
+        </a>
+        <a href="#" class="sb-link" data-section="banners">
+          <span class="sb-icon"><span class="ms">ad_units</span></span>
+          <span class="sb-label">Banners / Ads</span>
+          <span class="sb-count" id="cntBanners">–</span>
+        </a>
+        <a href="#" class="sb-link" data-section="profile">
+          <span class="sb-icon"><span class="ms">account_circle</span></span>
+          <span class="sb-label">Profile</span>
         </a>
         <a href="index.html" class="sb-link sb-external">
           <span class="sb-icon"><span class="ms">open_in_new</span></span>
@@ -99,44 +114,113 @@
     <!-- RIGHT CONTENT — section details -->
     <main class="admin-main">
 
-      <!-- ===== STATS OVERVIEW ===== -->
-      <div class="stats">
-        <div class="stat s-red">
-          <div class="stat-head">
-            <div class="stat-label">Total Posts</div>
-            <div class="stat-icon"><span class="ms">article</span></div>
+      <!-- ===== DASHBOARD SECTION ===== -->
+      <section class="admin-section active" data-section="dashboard">
+        <div class="dash-head">
+          <h2 class="section-title"><span class="md-icon"><span class="ms">dashboard</span></span>Dashboard</h2>
+          <div class="dash-range">
+            <button class="range-btn active" data-range="24h">24h</button>
+            <button class="range-btn" data-range="7d">7d</button>
+            <button class="range-btn" data-range="30d">30d</button>
+            <button class="range-btn" data-range="all">All</button>
           </div>
-          <div class="stat-value" id="statPosts">–</div>
-          <div class="stat-sub">All published news</div>
         </div>
-        <div class="stat s-indigo">
-          <div class="stat-head">
-            <div class="stat-label">Categories</div>
-            <div class="stat-icon"><span class="ms">folder</span></div>
+
+        <div class="stats" id="dashStats">
+          <div class="stat s-red">
+            <div class="stat-head">
+              <div class="stat-label">Total Posts</div>
+              <div class="stat-icon"><span class="ms">article</span></div>
+            </div>
+            <div class="stat-value" data-k="posts">–</div>
+            <div class="stat-sub">All time</div>
           </div>
-          <div class="stat-value" id="statCats">–</div>
-          <div class="stat-sub">Main categories</div>
-        </div>
-        <div class="stat s-amber">
-          <div class="stat-head">
-            <div class="stat-label">Sub-Categories</div>
-            <div class="stat-icon"><span class="ms">label</span></div>
+          <div class="stat s-indigo">
+            <div class="stat-head">
+              <div class="stat-label">Page Views</div>
+              <div class="stat-icon"><span class="ms">visibility</span></div>
+            </div>
+            <div class="stat-value" data-k="views">–</div>
+            <div class="stat-sub" id="dashRangeLabel">Last 24h</div>
           </div>
-          <div class="stat-value" id="statSubs">–</div>
-          <div class="stat-sub">Across all categories</div>
-        </div>
-        <div class="stat s-green">
-          <div class="stat-head">
-            <div class="stat-label">With Video</div>
-            <div class="stat-icon"><span class="ms">play_circle</span></div>
+          <div class="stat s-amber">
+            <div class="stat-head">
+              <div class="stat-label">Unique Visitors</div>
+              <div class="stat-icon"><span class="ms">group</span></div>
+            </div>
+            <div class="stat-value" data-k="uniqueVisitors">–</div>
+            <div class="stat-sub">Distinct browsers</div>
           </div>
-          <div class="stat-value" id="statVids">–</div>
-          <div class="stat-sub">Video stories</div>
+          <div class="stat s-green">
+            <div class="stat-head">
+              <div class="stat-label">Video Posts</div>
+              <div class="stat-icon"><span class="ms">play_circle</span></div>
+            </div>
+            <div class="stat-value" data-k="videos">–</div>
+            <div class="stat-sub">Stories with video</div>
+          </div>
         </div>
-      </div>
+
+        <div class="stats" id="dashStats2">
+          <div class="stat s-indigo">
+            <div class="stat-head">
+              <div class="stat-label">Categories</div>
+              <div class="stat-icon"><span class="ms">folder</span></div>
+            </div>
+            <div class="stat-value" data-k="categories">–</div>
+            <div class="stat-sub">Main categories</div>
+          </div>
+          <div class="stat s-amber">
+            <div class="stat-head">
+              <div class="stat-label">Sub-Categories</div>
+              <div class="stat-icon"><span class="ms">label</span></div>
+            </div>
+            <div class="stat-value" data-k="subcategories">–</div>
+            <div class="stat-sub">Across all categories</div>
+          </div>
+          <div class="stat s-red">
+            <div class="stat-head">
+              <div class="stat-label">New Posts</div>
+              <div class="stat-icon"><span class="ms">post_add</span></div>
+            </div>
+            <div class="stat-value" data-k="postsInRange">–</div>
+            <div class="stat-sub">In selected period</div>
+          </div>
+          <div class="stat s-green">
+            <div class="stat-head">
+              <div class="stat-label">Total Views (All Time)</div>
+              <div class="stat-icon"><span class="ms">analytics</span></div>
+            </div>
+            <div class="stat-value" data-k="viewsAll">–</div>
+            <div class="stat-sub">Since launch</div>
+          </div>
+        </div>
+
+        <div class="dash-grid">
+          <div class="card dash-card">
+            <h3><span class="md-icon"><span class="ms">show_chart</span></span>Views Over Time</h3>
+            <div class="chart-wrap"><canvas id="chartViews"></canvas></div>
+          </div>
+          <div class="card dash-card">
+            <h3><span class="md-icon"><span class="ms">donut_large</span></span>Posts by Category</h3>
+            <div class="chart-wrap"><canvas id="chartCategory"></canvas></div>
+          </div>
+        </div>
+
+        <div class="dash-grid">
+          <div class="card dash-card">
+            <h3><span class="md-icon"><span class="ms">trending_up</span></span>Top Viewed News</h3>
+            <ul class="rank-list" id="rankTop"><li class="empty-state">Loading…</li></ul>
+          </div>
+          <div class="card dash-card">
+            <h3><span class="md-icon"><span class="ms">history</span></span>Recent Activity</h3>
+            <ul class="rank-list" id="rankRecent"><li class="empty-state">Loading…</li></ul>
+          </div>
+        </div>
+      </section>
 
       <!-- ===== POSTS SECTION ===== -->
-      <section class="admin-section active" data-section="posts">
+      <section class="admin-section" data-section="posts">
         <div class="card">
           <h3 id="formCardTitle"><span class="md-icon"><span class="ms">post_add</span></span>Add / Edit News</h3>
 
@@ -164,7 +248,31 @@
 
       <!-- ===== ALL PUBLISHED STORIES SECTION ===== -->
       <section class="admin-section" data-section="stories">
-        <h2 class="section-title"><span class="md-icon"><span class="ms">auto_stories</span></span>All Published Stories</h2>
+        <div class="stories-head">
+          <h2 class="section-title"><span class="md-icon"><span class="ms">auto_stories</span></span>All Published Stories</h2>
+          <div class="stories-filters">
+            <div class="stories-count" id="storiesCount">–</div>
+            <div class="field stories-filter-field" style="margin:0;">
+              <select id="filterCat">
+                <option value="" disabled selected> </option>
+              </select>
+              <label><span class="ms" style="font-size:16px;vertical-align:-3px;">filter_alt</span> Category</label>
+            </div>
+            <div class="field stories-filter-field" style="margin:0;">
+              <select id="filterSub" disabled>
+                <option value="" disabled selected> </option>
+              </select>
+              <label><span class="ms" style="font-size:16px;vertical-align:-3px;">label</span> Sub-category</label>
+            </div>
+            <div class="field stories-filter-field stories-search" style="margin:0;">
+              <input id="filterSearch" type="text" placeholder=" ">
+              <label><span class="ms" style="font-size:16px;vertical-align:-3px;">search</span> Search</label>
+            </div>
+            <button class="btn-text" id="filterReset" type="button" style="margin:0;height:44px;align-self:flex-end;">
+              <span class="ms">refresh</span> Reset
+            </button>
+          </div>
+        </div>
         <div class="list" id="list"></div>
       </section>
 
@@ -212,6 +320,143 @@
 
           <hr class="md-divider">
           <div id="subCatList" class="list"></div>
+        </div>
+      </section>
+
+      <!-- ===== BANNERS / ADS SECTION ===== -->
+      <section class="admin-section" data-section="banners">
+        <h2 class="section-title"><span class="md-icon"><span class="ms">ad_units</span></span>Banners / Ads</h2>
+        <div class="card">
+          <p style="font-size:13px;color:var(--md-on-surface-var);margin-bottom:14px;">
+            Site-এর বিভিন্ন জায়গায় দেখানোর জন্য banner / ad image যোগ করুন।
+            <b>sidebar-bottom</b> হলো ডান পাশের sidebar-এর নিচে দেখাবে।
+          </p>
+
+          <form id="bannerForm" onsubmit="return false;" autocomplete="off">
+            <div class="banner-form-row">
+              <div class="field" style="margin:0;flex:1;min-width:200px;">
+                <select id="bnPosition">
+                  <option value="sidebar-bottom" selected>sidebar-bottom (ডান sidebar-এর নিচে)</option>
+                  <option value="sidebar-top">sidebar-top (ডান sidebar-এর উপরে)</option>
+                  <option value="header">header (পেজ-এর একদম উপরে)</option>
+                  <option value="footer">footer (পেজ-এর একদম নিচে)</option>
+                  <option value="inline">inline (কন্টেন্ট-এর মাঝে)</option>
+                </select>
+                <label>Position</label>
+              </div>
+              <div class="field" style="margin:0;flex:2;min-width:200px;">
+                <input id="bnTitle" placeholder=" ">
+                <label>Title (optional, alt text)</label>
+              </div>
+              <div class="field" style="margin:0;width:120px;">
+                <input id="bnOrder" type="number" placeholder=" " value="0">
+                <label>Order</label>
+              </div>
+            </div>
+
+            <div class="field" style="margin-top:14px;">
+              <input id="bnImage" placeholder=" ">
+              <label>Image URL (banner/ad image — JPG / PNG / GIF / WebP)</label>
+            </div>
+            <div class="field">
+              <input id="bnLink" placeholder=" ">
+              <label>Link URL (click করলে কোথায় যাবে — optional)</label>
+            </div>
+
+            <div class="banner-toggle">
+              <label class="md-switch">
+                <input type="checkbox" id="bnActive" checked>
+                <span class="md-switch-track"></span>
+                <span class="md-switch-label">Active (এই banner দেখাবে)</span>
+              </label>
+            </div>
+
+            <div class="banner-preview" id="bnPreview" style="display:none;">
+              <div class="banner-preview-label">Preview:</div>
+              <img id="bnPreviewImg" alt="">
+            </div>
+
+            <div style="display:flex;gap:8px;margin-top:14px;">
+              <button class="btn-filled" type="button" onclick="saveBanner()" id="bnSaveBtn" style="flex:1;">
+                <span class="ms">add</span> Add Banner
+              </button>
+              <button class="btn-text" type="button" onclick="resetBannerForm()" style="flex:0 0 auto;">
+                <span class="ms">refresh</span> Reset
+              </button>
+            </div>
+          </form>
+
+          <hr class="md-divider" style="margin-top:24px;">
+
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <h4 style="margin:0;font-size:14px;font-weight:600;letter-spacing:.04em;color:var(--md-on-surface-var);">
+              <span class="ms" style="font-size:18px;vertical-align:-3px;color:var(--md-primary);">list</span>
+              Existing Banners
+            </h4>
+            <div class="field" style="margin:0;min-width:160px;">
+              <select id="bnFilterPos">
+                <option value="">All positions</option>
+                <option value="sidebar-bottom">sidebar-bottom</option>
+                <option value="sidebar-top">sidebar-top</option>
+                <option value="header">header</option>
+                <option value="footer">footer</option>
+                <option value="inline">inline</option>
+              </select>
+              <label>Filter by position</label>
+            </div>
+          </div>
+
+          <div id="bannerList" class="banner-grid"></div>
+        </div>
+      </section>
+
+      <!-- ===== PROFILE SECTION ===== -->
+      <section class="admin-section" data-section="profile">
+        <h2 class="section-title"><span class="md-icon"><span class="ms">account_circle</span></span>Admin Profile</h2>
+        <div class="card" style="max-width:640px;">
+          <p style="font-size:13px;color:var(--md-on-surface-var);margin-bottom:18px;">
+            আপনার admin username, display name এবং password পরিবর্তন করুন।
+            Password পরিবর্তন করতে হলে আগে current password দিতে হবে।
+          </p>
+
+          <div class="profile-grid">
+            <div class="profile-avatar" id="profileAvatar">
+              <span class="ms" style="font-size:36px;color:var(--md-on-primary-cont);">person</span>
+            </div>
+            <div class="profile-info">
+              <div class="profile-name" id="profileName">–</div>
+              <div class="profile-role" id="profileRole">–</div>
+              <div class="profile-meta" id="profileMeta">–</div>
+            </div>
+          </div>
+
+          <hr class="md-divider">
+
+          <form id="profileForm" onsubmit="return false;" autocomplete="off">
+            <div class="field"><input id="pUsername" placeholder=" " autocomplete="off"><label>Username</label></div>
+            <div class="field"><input id="pDisplayName" placeholder=" " autocomplete="off"><label>Display name (sidebar-এ দেখাবে)</label></div>
+
+            <hr class="md-divider">
+            <h4 style="margin:0 0 12px;font-size:14px;color:var(--md-on-surface-var);font-weight:600;letter-spacing:.04em;">
+              <span class="ms" style="font-size:18px;vertical-align:-3px;color:var(--md-primary);">lock</span>
+              Password পরিবর্তন <span style="font-weight:400;opacity:.7;">(ঐচ্ছিক — খালি রাখলে password বদলাবে না)</span>
+            </h4>
+
+            <div class="field"><input id="pCurrentPass" type="password" placeholder=" " autocomplete="current-password"><label>Current password</label></div>
+            <div class="field"><input id="pNewPass" type="password" placeholder=" " autocomplete="new-password"><label>নতুন password (কমপক্ষে ৪ অক্ষর)</label></div>
+            <div class="field"><input id="pConfirmPass" type="password" placeholder=" " autocomplete="new-password"><label>নতুন password আবার লিখুন</label></div>
+
+            <div style="display:flex;gap:8px;margin-top:8px;">
+              <button class="btn-filled" type="button" onclick="saveProfile()" style="flex:1;">
+                <span class="ms">save</span> Save Profile
+              </button>
+              <button class="btn-outlined" type="button" onclick="loadProfile()" style="flex:0 0 auto;">
+                <span class="ms">refresh</span> Reload
+              </button>
+            </div>
+          </form>
+
+          <div id="profileNote" class="profile-note" style="display:none;"></div>
         </div>
       </section>
 
