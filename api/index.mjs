@@ -524,10 +524,18 @@ app.get("/api/admin/profile", requireAuth, async (req, res) => {
 
 app.put("/api/admin/profile", requireAuth, async (req, res) => {
   await ready();
-  if (req.admin?._env) {
-    return res.status(403).json({ error: "Profile is managed via Vercel env vars, not editable from UI" });
-  }
   const { username, display_name, email, phone, current_password, new_password } = req.body || {};
+
+  /* if env-managed, promote to a real DB row on first edit (so we can persist changes) */
+  if (req.admin?._env) {
+    const seedUser = String(username || req.admin.username).trim();
+    const seedHash = await bcrypt.hash(ADMIN_PASS || "1234", 10);
+    await db.prepare(
+      "INSERT OR IGNORE INTO admins (username, password, display_name, role, email, phone) VALUES (?, ?, ?, ?, ?, ?)"
+    ).run(seedUser, seedHash, "Editor", "admin", null, null);
+    const created = await db.prepare("SELECT id FROM admins WHERE username = ?").get(seedUser);
+    if (created) req.admin = { ...req.admin, id: created.id, _env: false };
+  }
 
   /* get current row */
   const cur = await db.prepare(
