@@ -234,9 +234,7 @@ img{display:block;max-width:100%}
   grid-template-columns: 1.8fr 1fr;
   gap:18px;
   align-items:stretch;
-  aspect-ratio: 16/9;
-  max-height:520px;
-  min-height:340px;
+  height:500px;
 }
 .hero-left, .hero-right{
   display:grid;
