@@ -295,13 +295,36 @@
   }
 
   function showError(msg){
-    document.getElementById("title").textContent = msg;
-    document.getElementById("dek").style.display = "none";
-    document.getElementById("byline").style.display = "none";
-    document.getElementById("figure").style.display = "none";
-    document.getElementById("detailsWrap").innerHTML = "";
-    document.getElementById("tagRow").innerHTML = "";
-    document.getElementById("shareRow").style.display = "none";
+    const kicker    = document.getElementById("kicker");
+    const title     = document.getElementById("title");
+    const dek       = document.getElementById("dek");
+    const byline    = document.getElementById("byline");
+    const figure    = document.getElementById("figure");
+    const tags      = document.getElementById("tagRow");
+    const share     = document.getElementById("shareRow");
+    const wrap      = document.getElementById("detailsWrap");
+    if(kicker) kicker.style.display = "none";
+    if(dek)    dek.style.display    = "none";
+    if(byline) byline.style.display = "none";
+    if(figure) figure.style.display = "none";
+    if(tags)   tags.innerHTML       = "";
+    if(share)  share.style.display  = "none";
+    if(wrap){
+      wrap.innerHTML =
+        '<div class="article-error">' +
+          '<div class="article-error-icon" aria-hidden="true">' +
+            '<svg viewBox="0 0 64 64" width="64" height="64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">' +
+              '<circle cx="32" cy="32" r="28"/>' +
+              '<line x1="22" y1="22" x2="42" y2="42"/>' +
+              '<line x1="42" y1="22" x2="22" y2="42"/>' +
+            '</svg>' +
+          '</div>' +
+          '<h2 class="article-error-msg">' + escHtml(msg) + '</h2>' +
+          '<p class="article-error-sub">অনুগ্রহ করে আবার চেষ্টা করুন অথবা হোমপেজে ফিরে যান।</p>' +
+          '<a href="/" class="article-error-btn">হোমপেজে ফিরে যান</a>' +
+        '</div>';
+    }
+    if(title) title.textContent = "";
   }
 
 })();
