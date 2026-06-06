@@ -442,31 +442,40 @@
       if (!grouped[s.category]) grouped[s.category] = [];
       grouped[s.category].push(s);
     }
+    const palette = [
+      { bg:"#f9dedc", fg:"#b3261e" },
+      { bg:"#e8def8", fg:"#6750a4" },
+      { bg:"#cce8ff", fg:"#0058a3" },
+      { bg:"#d8f5e3", fg:"#1b5e20" },
+      { bg:"#fde7c4", fg:"#7c3a00" },
+      { bg:"#ffd8e4", fg:"#7d5260" },
+      { bg:"#d8e6ff", fg:"#1a237e" }
+    ];
+    let pi = 0;
     for (const cat of Object.keys(grouped).sort()){
+      const color = palette[pi++ % palette.length];
+      const items = grouped[cat];
       const block = document.createElement("div");
-      block.style.cssText = "margin-bottom:18px;padding:14px;background:#faf6ec;border:1px solid #e5dfd0;border-radius:6px;";
+      block.className = "subcat-group";
+      block.style.setProperty("--sc-bg", color.bg);
+      block.style.setProperty("--sc-fg", color.fg);
+
       const head = document.createElement("div");
-      head.style.cssText = "font-weight:700;font-size:15px;margin-bottom:10px;color:#c1131d;letter-spacing:.04em;";
-      head.textContent = cat;
+      head.className = "subcat-head";
+      head.innerHTML = '<div class="subcat-head-left"><span class="subcat-icon"><span class="ms">folder</span></span><span class="subcat-name">' + esc(cat) + '</span></div><span class="subcat-count">' + items.length + '</span>';
       block.appendChild(head);
 
-      const tags = document.createElement("div");
-      tags.style.cssText = "display:flex;flex-wrap:wrap;gap:8px;";
-      grouped[cat].forEach(s => {
-        const tag = document.createElement("span");
-        tag.style.cssText = "display:inline-flex;align-items:center;gap:8px;padding:5px 10px;background:#fff;border:1px solid #0a0a0a;border-radius:999px;font-size:13px;font-family:'Hind Siliguri',sans-serif;";
-        const label = document.createElement("span");
-        label.textContent = s.name + (s.newsCount ? ` (${s.newsCount})` : "");
-        const x = document.createElement("button");
-        x.textContent = "✕";
-        x.title = "মুছুন";
-        x.style.cssText = "background:none;border:none;color:#c1131d;cursor:pointer;font-size:14px;line-height:1;padding:0;";
-        x.addEventListener("click", () => deleteSubCategory(s.id, s.name));
-        tag.appendChild(label);
-        tag.appendChild(x);
-        tags.appendChild(tag);
+      const chips = document.createElement("div");
+      chips.className = "subcat-chips";
+      items.forEach(s => {
+        const chip = document.createElement("div");
+        chip.className = "subcat-chip";
+        const cnt = s.newsCount ? '<span class="subcat-chip-count">' + s.newsCount + '</span>' : '';
+        chip.innerHTML = '<span class="subcat-chip-label">' + esc(s.name) + '</span>' + cnt + '<button class="subcat-chip-x" title="মুছুন" aria-label="Delete"><span class="ms" style="font-size:16px;line-height:1;">close</span></button>';
+        chip.querySelector(".subcat-chip-x").addEventListener("click", () => deleteSubCategory(s.id, s.name));
+        chips.appendChild(chip);
       });
-      block.appendChild(tags);
+      block.appendChild(chips);
       subCatList.appendChild(block);
     }
   }
