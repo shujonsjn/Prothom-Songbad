@@ -58,9 +58,14 @@ let schemaReady = (async () => {
   `);
   await db.exec(`
     CREATE TABLE IF NOT EXISTS categories (
-      name TEXT PRIMARY KEY
+      name       TEXT PRIMARY KEY,
+      sort_order INTEGER DEFAULT 0,
+      hidden     INTEGER DEFAULT 0
     )
   `);
+  /* self-healing migration for older deployments */
+  try { await db.exec("ALTER TABLE categories ADD COLUMN sort_order INTEGER DEFAULT 0"); } catch {}
+  try { await db.exec("ALTER TABLE categories ADD COLUMN hidden INTEGER DEFAULT 0"); } catch {}
   await db.exec(`
     CREATE TABLE IF NOT EXISTS subcategories (
       id         INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -164,7 +169,18 @@ let schemaReady = (async () => {
   ).all();
   for (const r of existing) {
     if (r.category) {
-      await db.prepare("INSERT OR IGNORE INTO categories (name) VALUES (?)").run(r.category);
+      /* use order: main categories first, then others */
+      const order = (r.category === "খেলা" || r.category === "জাতীয়" || r.category === "আন্তর্জাতিক" || r.category === "বিনোদন" || r.category === "প্রযুক্তি") ? 0 : 999;
+      await db.prepare("INSERT OR IGNORE INTO categories (name, sort_order) VALUES (?, ?)").run(r.category, order);
+    }
+  }
+  /* one-time sort normalization: ensure all categories have a proper sort_order */
+  const noOrder = await db.prepare("SELECT COUNT(*) AS c FROM categories WHERE sort_order IS NULL OR sort_order = 0").get();
+  if ((noOrder?.c || 0) > 0) {
+    const all = await db.prepare("SELECT name FROM categories ORDER BY sort_order ASC, name ASC").all();
+    let i = 0;
+    for (const r of all) {
+      await db.prepare("UPDATE categories SET sort_order = ? WHERE name = ?").run(i++, r.name);
     }
   }
 
@@ -319,14 +335,50 @@ app.get("/api/news/:id", async (req, res) => {
 
 app.get("/api/categories", async (req, res) => {
   try {
+    const includeHidden = req.query.includeHidden === "1";
+    const hiddenFilter = includeHidden ? "" : "WHERE c.hidden = 0";
     const rows = await db.prepare(`
-      SELECT c.name AS category, COUNT(n.id) AS count
+      SELECT c.name AS category, c.sort_order, c.hidden, COUNT(n.id) AS count
       FROM categories c
       LEFT JOIN news n ON n.category = c.name
+      ${hiddenFilter}
       GROUP BY c.name
-      ORDER BY count DESC, c.name ASC
+      ORDER BY c.sort_order ASC, count DESC, c.name ASC
     `).all();
     res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* Reorder categories — body: [{name, sort_order}] */
+app.put("/api/categories/reorder", requireAuth, async (req, res) => {
+  try {
+    const list = Array.isArray(req.body?.order) ? req.body.order : null;
+    if(!list) return res.status(400).json({ error: "Body must be { order: [{name, sort_order}] }" });
+    let i = 0;
+    for(const item of list){
+      const name = String(item.name || "").trim();
+      if(!name) continue;
+      const order = Number.isFinite(item.sort_order) ? Number(item.sort_order) : i;
+      await db.prepare("UPDATE categories SET sort_order = ? WHERE name = ?").run(order, name);
+      i++;
+    }
+    res.json({ ok: true, count: list.length });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* Toggle category hidden/visible */
+app.put("/api/categories/:name/hidden", requireAuth, async (req, res) => {
+  try {
+    const name = decodeURIComponent(req.params.name || "").trim();
+    const hidden = req.body?.hidden ? 1 : 0;
+    if(!name) return res.status(400).json({ error: "name required" });
+    const r = await db.prepare("UPDATE categories SET hidden = ? WHERE name = ?").run(hidden, name);
+    if(r.changes === 0) return res.status(404).json({ error: "Category not found" });
+    res.json({ ok: true, name, hidden });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -409,8 +461,11 @@ app.post("/api/categories", requireAuth, async (req, res) => {
     if (name.length > 40) return res.status(400).json({ error: "Name too long (max 40)" });
     const exists = await db.prepare("SELECT 1 FROM categories WHERE name = ?").get(name);
     if (exists) return res.status(409).json({ error: "Category already exists" });
-    await db.prepare("INSERT INTO categories (name) VALUES (?)").run(name);
-    res.status(201).json({ ok: true, name });
+    /* assign next sort_order (max+1) so new categories append to the bottom */
+    const maxOrder = await db.prepare("SELECT COALESCE(MAX(sort_order), -1) AS m FROM categories").get();
+    const nextOrder = (maxOrder?.m ?? -1) + 1;
+    await db.prepare("INSERT INTO categories (name, sort_order) VALUES (?, ?)").run(name, nextOrder);
+    res.status(201).json({ ok: true, name, sort_order: nextOrder });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

@@ -448,12 +448,16 @@
     categoriesCache.forEach(c => {
       const row = document.createElement("div");
       row.className = "cat-item";
+      row.draggable = true;
+      row.dataset.name = c.category;
       row.innerHTML = `
+        <span class="cat-drag" title="ধরে টেনে উপরে-নিচে সাজান"><span class="ms">drag_indicator</span></span>
         <div class="cat-info">
           <b>${esc(c.category)}</b>
-          <small>${c.count}টি সংবাদ</small>
+          <small>${c.count}টি সংবাদ${c.hidden ? ' · <span style="color:#c1131d;">লুকানো</span>' : ''}</small>
         </div>
         <div class="actions">
+          <button class="small-btn" data-name="${esc(c.category)}" data-action="toggle" title="Hide/Show on public site">${c.hidden ? 'Show' : 'Hide'}</button>
           <button class="small-btn" data-name="${esc(c.category)}" data-action="del">Delete</button>
         </div>`;
       catList.appendChild(row);
@@ -461,7 +465,75 @@
     catList.querySelectorAll('button[data-action="del"]').forEach(btn => {
       btn.addEventListener("click", () => deleteCategory(btn.dataset.name));
     });
+    catList.querySelectorAll('button[data-action="toggle"]').forEach(btn => {
+      btn.addEventListener("click", () => toggleCategoryHidden(btn.dataset.name));
+    });
+    /* drag & drop reordering */
+    let dragSrc = null;
+    let saveTimer = null;
+    catList.querySelectorAll('.cat-item').forEach(row => {
+      row.addEventListener("dragstart", (e) => {
+        dragSrc = row;
+        row.classList.add("dragging");
+        e.dataTransfer.effectAllowed = "move";
+        try { e.dataTransfer.setData("text/plain", row.dataset.name); } catch {}
+      });
+      row.addEventListener("dragend", () => {
+        row.classList.remove("dragging");
+        catList.querySelectorAll('.cat-item').forEach(r => r.classList.remove("drag-over"));
+        /* debounced save */
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(saveCategoryOrder, 600);
+      });
+      row.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+        if(!dragSrc || dragSrc === row) return;
+        const rect = row.getBoundingClientRect();
+        const after = (e.clientY - rect.top) > rect.height / 2;
+        if(after) row.parentNode.insertBefore(dragSrc, row.nextSibling);
+        else      row.parentNode.insertBefore(dragSrc, row);
+        catList.querySelectorAll('.cat-item').forEach(r => r.classList.remove("drag-over"));
+        row.classList.add("drag-over");
+      });
+    });
   }
+
+  function saveCategoryOrder(){
+    const rows = Array.from(catList.querySelectorAll('.cat-item'));
+    const order = rows.map((r, i) => ({ name: r.dataset.name, sort_order: i }));
+    /* also update local cache so public site gets the new order on next fetch */
+    categoriesCache.forEach(c => {
+      const found = order.find(o => o.name === c.category);
+      if(found) c.sort_order = found.sort_order;
+    });
+    fetch("/api/categories/reorder", {
+      method: "PUT",
+      headers: { ...authHeader(), "Content-Type": "application/json" },
+      body: JSON.stringify({ order })
+    })
+      .then(r => r.ok ? r.json() : Promise.reject(new Error("HTTP " + r.status)))
+      .then(() => toast("Category order saved ✓"))
+      .catch(err => toast("Order save failed: " + err.message, "error"));
+  }
+
+  window.toggleCategoryHidden = function(name){
+    const c = categoriesCache.find(x => x.category === name);
+    if(!c) return;
+    const newHidden = !c.hidden;
+    fetch("/api/categories/" + encodeURIComponent(name) + "/hidden", {
+      method: "PUT",
+      headers: { ...authHeader(), "Content-Type": "application/json" },
+      body: JSON.stringify({ hidden: newHidden })
+    })
+      .then(r => r.ok ? r.json() : Promise.reject(new Error("HTTP " + r.status)))
+      .then(() => {
+        c.hidden = newHidden ? 1 : 0;
+        renderCategoryList();
+        toast(newHidden ? "লুকানো হয়েছে (public site থেকে সরানো)" : "দেখাচ্ছে");
+      })
+      .catch(err => toast("Toggle failed: " + err.message, "error"));
+  };
 
   /* ===== ADD CATEGORY ===== */
   window.addCategory = function(){

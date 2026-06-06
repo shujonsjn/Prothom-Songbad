@@ -782,6 +782,29 @@ button:disabled{ opacity:.38; pointer-events:none; }
   font-size:12px;
   color:var(--md-on-surface-var);
 }
+.cat-drag{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:28px; height:28px;
+  border-radius:6px;
+  color:var(--md-on-surface-var);
+  cursor:grab;
+  user-select:none;
+  font-size:20px;
+  flex-shrink:0;
+  transition:background .15s, color .15s;
+}
+.cat-drag:hover{ background:var(--md-surface-cont); color:var(--md-on-surface); }
+.cat-drag:active{ cursor:grabbing; }
+.cat-item.dragging{
+  opacity:.5;
+  background:var(--md-primary-cont);
+}
+.cat-item.drag-over{
+  border-top:2px solid var(--md-primary);
+  padding-top:10px;
+}
 
 /* ==========================================================
    M3 CHIPS (sub-category, video badge)
