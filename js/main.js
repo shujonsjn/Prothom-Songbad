@@ -264,10 +264,16 @@
     sideNews.innerHTML = "";
     data.slice(0,6).forEach(n => {
       const sv = n.video ? `<span class="vid-badge">▶</span>` : "";
+      const details = (n.details || "").replace(/\s+/g, " ").trim();
+      const excerpt = details.length > 90 ? details.slice(0, 90) + "…" : details;
       sideNews.innerHTML += `
         <div class="side-news" onclick="openNews(${n.id})">
           <img src="${esc(n.image)}" alt="">
-          <div class="side-title">${esc(n.title)} ${sv}</div>
+          <div class="side-text">
+            <h4 class="side-title">${esc(n.title)} ${sv}</h4>
+            <p class="side-excerpt">${esc(excerpt)}</p>
+            <div class="side-meta">${esc(n.category || "সংবাদ")} • ${esc(timeAgo(n.created_at))}</div>
+          </div>
         </div>`;
     });
   }

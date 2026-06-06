@@ -642,6 +642,7 @@ img{display:block;max-width:100%}
   padding-bottom:14px;
   border-bottom:1px solid #e8e2d4;
   transition:opacity .2s;
+  align-items:flex-start;
 }
 
 .side-news:last-child{
@@ -659,13 +660,39 @@ img{display:block;max-width:100%}
   border-radius:4px;
   flex-shrink:0;
   border:1px solid #e8e2d4;
+  margin-top:2px;
+}
+
+.side-text{
+  flex:1;
+  min-width:0;
 }
 
 .side-title{
   font-family:'Playfair Display',serif;
-  font-size:16px;
+  font-size:15px;
   font-weight:700;
-  line-height:1.35;
+  line-height:1.3;
+  color:#1a1a1a;
+  margin-bottom:4px;
+}
+
+.side-excerpt{
+  font-family:'Hind Siliguri',sans-serif;
+  font-size:12.5px;
+  line-height:1.5;
+  color:#5a5a5a;
+  margin-bottom:5px;
+  display:-webkit-box;
+  -webkit-line-clamp:2;
+  -webkit-box-orient:vertical;
+  overflow:hidden;
+}
+
+.side-meta{
+  font-family:'Hind Siliguri',sans-serif;
+  font-size:11px;
+  color:#888;
 }
 
 /* ===== EMPTY STATE ===== */
