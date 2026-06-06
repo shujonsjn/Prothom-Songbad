@@ -7,6 +7,16 @@
   let credentials = null;   // { u, p }
   let editId      = null;   // currently edited news id
 
+  /* native alert() override → use toast if available, fallback to alert */
+  const _origAlert = window.alert.bind(window);
+  window.alert = function(msg){
+    if(typeof toast === "function"){
+      toast(String(msg), "err");
+    } else {
+      _origAlert(msg);
+    }
+  };
+
   const loginBox = document.getElementById("loginBox");
   const admin    = document.getElementById("admin");
   const u        = document.getElementById("u");
@@ -96,6 +106,39 @@
     if(cntPostsEl) cntPostsEl.textContent = (list && list.children.length) || 0;
     if(cntCatsEl)  cntCatsEl.textContent  = categoriesCache.length || 0;
     if(cntSubsEl)  cntSubsEl.textContent  = (subCatsCache || []).length || 0;
+    const statPostsEl = document.getElementById("statPosts");
+    const statCatsEl  = document.getElementById("statCats");
+    const statSubsEl  = document.getElementById("statSubs");
+    const statVidsEl  = document.getElementById("statVids");
+    if(statPostsEl) statPostsEl.textContent = (list && list.children.length) || 0;
+    if(statCatsEl)  statCatsEl.textContent  = categoriesCache.length || 0;
+    if(statSubsEl)  statSubsEl.textContent  = (subCatsCache || []).length || 0;
+    if(statVidsEl)  statVidsEl.textContent  = (list ? list.querySelectorAll("[data-vid='1']").length : 0);
+  }
+
+  /* ===== TOAST NOTIFICATIONS ===== */
+  function ensureToastWrap(){
+    let w = document.querySelector(".toast-wrap");
+    if(!w){
+      w = document.createElement("div");
+      w.className = "toast-wrap";
+      document.body.appendChild(w);
+    }
+    return w;
+  }
+  function toast(msg, type = "ok", ms = 2600){
+    const w = ensureToastWrap();
+    const t = document.createElement("div");
+    t.className = "toast " + type;
+    const icons = { ok: "✓", err: "✕", warn: "!" };
+    t.innerHTML = `<span class="toast-icon">${icons[type] || "•"}</span><span class="toast-msg">${msg}</span>`;
+    w.appendChild(t);
+    setTimeout(() => {
+      t.style.transition = "opacity .3s, transform .3s";
+      t.style.opacity = "0";
+      t.style.transform = "translateX(20px)";
+      setTimeout(() => t.remove(), 320);
+    }, ms);
   }
 
   /* sidebar-এ logged-in user name দেখাই */
@@ -110,13 +153,13 @@
   /* ===== SAVE / PUBLISH (create or update) ===== */
   window.save = function(){
     if(!title.value || !category.value || !details.value){
-      alert("Title, Category, Details সবগুলো দিতে হবে");
+      toast("Title, Category, Details সবগুলো দিতে হবে", "warn");
       return;
     }
 
     const isEdit = editId !== null;
     if(!isEdit && !img.files[0] && !document.getElementById("imageUrl").value){
-      alert("Image required");
+      toast("Image required", "warn");
       return;
     }
 
@@ -138,16 +181,17 @@
 
     fetch(url, { method, headers: authHeader(), body: form })
       .then(r => {
-        if(r.status === 401){ alert("Session expired. Please login again."); logout(); return null; }
+        if(r.status === 401){ toast("Session expired. Please login again.", "err"); logout(); return null; }
         if(!r.ok) throw new Error("HTTP " + r.status);
         return r.json();
       })
       .then(saved => {
         if(!saved) return;
+        toast(isEdit ? "✓ আপডেট হয়েছে" : "✓ প্রকাশিত হয়েছে", "ok");
         clear();
         load();
       })
-      .catch(err => alert("Save failed: " + err.message));
+      .catch(err => toast("Save failed: " + err.message, "err"));
   };
 
   /* ===== LOAD LIST ===== */
@@ -484,17 +528,17 @@
       return;
     }
     rows.forEach(n => {
-      const sub = n.subcategory ? ` › ${esc(n.subcategory)}` : "";
-      const vid = n.video ? ` <span style="color:#c1131d">▶</span>` : "";
+      const sub = n.subcategory ? ` <span class="pill">${esc(n.subcategory)}</span>` : "";
+      const vid = n.video ? ` <span class="pill red" title="Video">▶ Video</span>` : "";
       list.innerHTML += `
-        <div class="news-item">
+        <div class="news-item" data-vid="${n.video ? 1 : 0}">
           <div class="info">
-            <b>${esc(n.title)}${vid}</b>
-            <small>${esc(n.category)}${sub}</small>
+            <b>${esc(n.title)}</b>
+            <small>${esc(n.category)}${sub}${vid}</small>
           </div>
           <div class="actions">
             <button class="small-btn" onclick="edit(${n.id})">Edit</button>
-            <button class="small-btn" onclick="del(${n.id})">Delete</button>
+            <button class="small-btn btn-red" onclick="del(${n.id})">Delete</button>
           </div>
         </div>`;
     });

@@ -35,7 +35,11 @@
 
   <div class="masthead-bar">
     <h1>The Newsroom</h1>
-    <div class="tagline">Editorial Dashboard · <a href="index.html" style="color:#0a0a0a;text-decoration:underline;margin-right:12px;">Home</a>· <a href="#" onclick="logout();return false;" style="color:#0a0a0a;text-decoration:underline;">Logout</a></div>
+    <div class="tagline">
+      <span>Editorial Dashboard</span>
+      <a href="index.html">Home</a>
+      <a href="#" onclick="logout();return false;">Logout</a>
+    </div>
   </div>
 
   <div class="admin-layout">
@@ -55,6 +59,10 @@
           <span class="sb-icon">📰</span>
           <span class="sb-label">Posts / News</span>
           <span class="sb-count" id="cntPosts">–</span>
+        </a>
+        <a href="#" class="sb-link sb-sub" data-section="stories">
+          <span class="sb-icon">📄</span>
+          <span class="sb-label">All Published Stories</span>
         </a>
         <a href="#" class="sb-link" data-section="categories">
           <span class="sb-icon">📁</span>
@@ -84,6 +92,30 @@
     <!-- RIGHT CONTENT — section details -->
     <main class="admin-main">
 
+      <!-- ===== STATS OVERVIEW ===== -->
+      <div class="stats">
+        <div class="stat s-red">
+          <div class="stat-label">Total Posts</div>
+          <div class="stat-value" id="statPosts">–</div>
+          <div class="stat-sub">All published news</div>
+        </div>
+        <div class="stat s-blue">
+          <div class="stat-label">Categories</div>
+          <div class="stat-value" id="statCats">–</div>
+          <div class="stat-sub">Main categories</div>
+        </div>
+        <div class="stat s-amber">
+          <div class="stat-label">Sub-Categories</div>
+          <div class="stat-value" id="statSubs">–</div>
+          <div class="stat-sub">Across all categories</div>
+        </div>
+        <div class="stat s-green">
+          <div class="stat-label">With Video</div>
+          <div class="stat-value" id="statVids">–</div>
+          <div class="stat-sub">Video stories</div>
+        </div>
+      </div>
+
       <!-- ===== POSTS SECTION ===== -->
       <section class="admin-section active" data-section="posts">
         <div class="card">
@@ -106,7 +138,10 @@
 
           <button onclick="save()">Publish</button>
         </div>
+      </section>
 
+      <!-- ===== ALL PUBLISHED STORIES SECTION ===== -->
+      <section class="admin-section" data-section="stories">
         <h3 class="section-title">All Published Stories</h3>
         <div id="list"></div>
       </section>
