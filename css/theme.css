@@ -1076,35 +1076,29 @@ body.news-paper{ background:#fafaf5; }
 }
 .article-body p.lede{
   font-size:19px;
-  line-height:1.7;
+  line-height:1.85;
   margin-bottom:28px;
   text-align:left;
 }
+/* Drop cap and lead-in reset — body text is uniform, no decorative styling. */
 .article-body p.lede::first-letter,
 .article-body .dropcap{
-  font-family:'Noto Serif Bengali','Playfair Display',serif;
-  font-weight:900;
-  font-size:46px;
-  line-height:0.95;
-  float:left;
-  padding:3px 8px 0 0;
-  margin-top:4px;
-  margin-right:2px;
-  color:#c1131d;
-  text-transform:uppercase;
-  -webkit-initial-letter:2;
-  initial-letter:2;
+  font-family:inherit;
+  font-weight:inherit;
+  font-size:inherit;
+  line-height:inherit;
+  float:none;
+  padding:0;
+  margin:0;
+  color:inherit;
+  text-transform:none;
+  -webkit-initial-letter:0;
+  initial-letter:0;
 }
-
-/* lede lead-in — first 2-3 words kept together (no font change) so line break lands after them */
-.article-body .lede-lead{
-  white-space:nowrap;
-}
-/* when a long word would overflow, allow it to wrap at any char instead of hyphenating */
 .article-body .lede-lead{
   white-space:normal;
-  overflow-wrap:break-word;
-  word-break:keep-all;
+  font-weight:inherit;
+  font-size:inherit;
 }
 .article-body .article-empty{
   color:#888;
@@ -1468,9 +1462,9 @@ body.news-paper{ background:#fafaf5; }
   .dek{ font-size:16px; }
   .byline{ font-size:11px; gap:6px; }
   .article-body{ font-size:16px; line-height:1.75; }
-  .article-body p.lede{ font-size:17px; }
+  .article-body p.lede{ font-size:16px; }
   .article-body p.lede::first-letter,
-  .article-body .dropcap{ font-size:36px; padding-right:6px; }
+  .article-body .dropcap{ font-size:inherit; padding:0; }
   .article-body .pull-quote{ font-size:18px; padding:20px 16px; }
   .share-row .share-btn span{ display:none; }
   .share-row .share-btn{ padding:8px 10px; }

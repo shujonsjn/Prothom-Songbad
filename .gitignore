@@ -3,5 +3,23 @@ node_modules/
 .env
 *.log
 .DS_Store
+package-lock.json
 
 .vercel
+
+# Test screenshots
+*.png
+/test-screenshots/
+/debug-*.png
+/home-*.png
+/news-*.png
+/logo-*.png
+/dropcap-*.png
+/lede-*.png
+/admin-*.png
+/newspaper-*.png
+/scrolled-*.png
+/no-hyphens-*.png
+/news-fixed-*.png
+/news-article-fixed-*.png
+/news-page-*.png
