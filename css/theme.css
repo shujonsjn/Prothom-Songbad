@@ -308,9 +308,10 @@ img{display:block;max-width:100%}
 }
 .hero-med:hover .hero-med-img img{ transform:scale(1.04); }
 
-/* Tall hero-med: single card filling the right column full height */
+/* Tall hero-med: single card filling the right column full height, image dominant like hero-big */
 .hero-med-tall{ height:100%; }
-.hero-med-tall .hero-med-img{ height:50%; min-height:0; aspect-ratio:auto; }
+.hero-med-tall .hero-med-img{ height:62%; min-height:0; aspect-ratio:auto; }
+.hero-med-tall .hero-med-title{ font-size:18px; line-height:1.4; padding:14px 14px 6px; }
 .hero-vid-sm{
   position:absolute;
   top:8px;
