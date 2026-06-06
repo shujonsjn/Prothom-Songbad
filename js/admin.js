@@ -349,10 +349,12 @@
     const parent  = category.value || "";
     subcat.innerHTML = "";
 
-    /* placeholder */
+    /* placeholder (empty text — label acts as visible placeholder) */
     const ph = document.createElement("option");
     ph.value = "";
-    ph.textContent = parent ? `— Sub-category (optional) —` : `— আগে main category বাছাই করুন —`;
+    ph.textContent = " ";
+    ph.disabled = true;
+    if(!prev) ph.selected = true;
     subcat.appendChild(ph);
 
     if(!parent) return;
