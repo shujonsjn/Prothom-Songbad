@@ -41,15 +41,8 @@
     /* headline */
     $("title").textContent = n.title || "শিরোনাম পাওয়া যায়নি";
 
-    /* dek (subtitle) — first 140 chars of details or empty */
-    const body = (n.details || "").trim();
-    if(body.length > 80){
-      const cut = body.slice(0, 160);
-      const lastStop = Math.max(cut.lastIndexOf("।"), cut.lastIndexOf("."));
-      $("dek").textContent = (lastStop > 60 ? cut.slice(0, lastStop + 1) : cut) + "…";
-    } else {
-      $("dek").textContent = "";
-    }
+    /* dek removed — not used */
+    $("dek").style.display = "none";
 
     /* image + caption (caption = category + time) */
     const img = $("img");
@@ -303,7 +296,7 @@
 
   function showError(msg){
     document.getElementById("title").textContent = msg;
-    document.getElementById("dek").textContent = "";
+    document.getElementById("dek").style.display = "none";
     document.getElementById("byline").style.display = "none";
     document.getElementById("figure").style.display = "none";
     document.getElementById("detailsWrap").innerHTML = "";
