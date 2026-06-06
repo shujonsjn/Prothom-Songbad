@@ -614,21 +614,26 @@ img{display:block;max-width:100%}
 .sidebar{
   background:#ffffff;
   padding:22px 22px 18px;
-  border:1px solid #0a0a0a;
-  border-radius:6px;
+  border:1px solid #e8e2d4;
+  border-radius:4px;
   height:fit-content;
-  box-shadow:0 1px 4px rgba(0,0,0,0.06);
+  transition: box-shadow .2s, border-color .2s;
+}
+
+.sidebar:hover{
+  border-color:#c1131d;
 }
 
 .sidebar h3{
-  font-family:'Playfair Display',serif;
+  font-family:'Hind Siliguri',sans-serif;
   font-weight:700;
   font-size:22px;
   margin-bottom:18px;
   padding-bottom:10px;
-  border-bottom:3px double #0a0a0a;
+  border-bottom:1px solid #e8e2d4;
   text-transform:uppercase;
   letter-spacing:0.04em;
+  color:#0a0a0a;
 }
 
 .side-news{
@@ -637,7 +642,7 @@ img{display:block;max-width:100%}
   margin-bottom:16px;
   cursor:pointer;
   padding-bottom:14px;
-  border-bottom:1px solid #e5e0d4;
+  border-bottom:1px solid #e8e2d4;
   transition:opacity .2s;
 }
 
@@ -655,7 +660,7 @@ img{display:block;max-width:100%}
   object-fit:cover;
   border-radius:4px;
   flex-shrink:0;
-  border:1px solid #0a0a0a;
+  border:1px solid #e8e2d4;
 }
 
 .side-title{
