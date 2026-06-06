@@ -32,17 +32,26 @@
   <div class="menu-container" id="navMenu"></div>
 </nav>
 
-<div id="navDropdown" class="nav-dropdown" aria-hidden="true"></div>
-
-<div class="breaking">
-  <span class="label">Breaking</span>
-  <span class="ticker" id="ticker">Loading...</span>
-</div>
+<div id="subStrip" class="sub-strip"></div>
 
 <div class="container">
 
   <main>
-    <div id="mainNews"></div>
+      <div id="mainNews"></div>
+
+      <div class="news-slider" id="newsSlider" style="display:none;">
+        <h2 class="section-title-2">নতুন সংবাদ</h2>
+        <div class="slider-viewport">
+          <div class="slider-track" id="sliderTrack"></div>
+        </div>
+        <div class="slider-dots" id="sliderDots"></div>
+      </div>
+
+    <div class="read-more" id="readMoreWrap" style="display:none;">
+      <h2 class="section-title-2">আরও পড়ুন</h2>
+      <ul class="read-more-list" id="readMore"></ul>
+      <button class="load-more" id="loadMore">আরও দেখান</button>
+    </div>
   </main>
 
   <aside class="sidebar">
