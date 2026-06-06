@@ -415,7 +415,7 @@
         <h2 class="section-title"><span class="md-icon"><span class="ms">account_circle</span></span>Admin Profile</h2>
         <div class="card" style="max-width:640px;">
           <p style="font-size:13px;color:var(--md-on-surface-var);margin-bottom:18px;">
-            আপনার admin username, display name এবং password পরিবর্তন করুন।
+            আপনার admin username, display name, email, phone এবং password পরিবর্তন করুন।
             Password পরিবর্তন করতে হলে আগে current password দিতে হবে।
           </p>
 
@@ -427,6 +427,7 @@
               <div class="profile-name" id="profileName">–</div>
               <div class="profile-role" id="profileRole">–</div>
               <div class="profile-meta" id="profileMeta">–</div>
+              <div class="profile-contacts" id="profileContacts" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;"></div>
             </div>
           </div>
 
@@ -435,6 +436,8 @@
           <form id="profileForm" onsubmit="return false;" autocomplete="off">
             <div class="field"><input id="pUsername" placeholder=" " autocomplete="off"><label>Username</label></div>
             <div class="field"><input id="pDisplayName" placeholder=" " autocomplete="off"><label>Display name (sidebar-এ দেখাবে)</label></div>
+            <div class="field"><input id="pEmail" type="email" placeholder=" " autocomplete="off"><label>Email (যোগাযোগের জন্য — optional)</label></div>
+            <div class="field"><input id="pPhone" type="tel" placeholder=" " autocomplete="off"><label>Phone (BD format: 01XXXXXXXXX — optional)</label></div>
 
             <hr class="md-divider">
             <h4 style="margin:0 0 12px;font-size:14px;color:var(--md-on-surface-var);font-weight:600;letter-spacing:.04em;">

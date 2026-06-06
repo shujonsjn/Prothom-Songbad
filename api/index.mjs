@@ -91,11 +91,16 @@ let schemaReady = (async () => {
       password     TEXT    NOT NULL,
       display_name TEXT,
       role         TEXT    DEFAULT 'admin',
+      email        TEXT,
+      phone        TEXT,
       last_login   DATETIME,
       created_at   DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at   DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
+  /* self-healing migration for older deployments (adds email/phone to existing rows) */
+  try { await db.exec("ALTER TABLE admins ADD COLUMN email TEXT"); } catch {}
+  try { await db.exec("ALTER TABLE admins ADD COLUMN phone TEXT"); } catch {}
 
   /* ===== Banners / Ads ===== */
   await db.exec(`
@@ -511,7 +516,7 @@ app.get("/api/admin/profile", requireAuth, async (req, res) => {
     });
   }
   const row = await db.prepare(
-    "SELECT id, username, display_name, role, created_at, last_login, updated_at FROM admins WHERE id = ?"
+    "SELECT id, username, display_name, role, email, phone, created_at, last_login, updated_at FROM admins WHERE id = ?"
   ).get(req.admin.id);
   if (!row) return res.status(404).json({ error: "Admin not found" });
   res.json({ ...row, source: "db" });
@@ -522,11 +527,11 @@ app.put("/api/admin/profile", requireAuth, async (req, res) => {
   if (req.admin?._env) {
     return res.status(403).json({ error: "Profile is managed via Vercel env vars, not editable from UI" });
   }
-  const { username, display_name, current_password, new_password } = req.body || {};
+  const { username, display_name, email, phone, current_password, new_password } = req.body || {};
 
   /* get current row */
   const cur = await db.prepare(
-    "SELECT id, username, password, display_name FROM admins WHERE id = ?"
+    "SELECT id, username, password, display_name, email, phone FROM admins WHERE id = ?"
   ).get(req.admin.id);
   if (!cur) return res.status(404).json({ error: "Admin not found" });
 
@@ -565,14 +570,41 @@ app.put("/api/admin/profile", requireAuth, async (req, res) => {
     newDisplay = String(display_name).trim().slice(0, 60) || "Editor";
   }
 
+  /* email validation (optional, but if given must be valid) */
+  let newEmail = cur.email;
+  if (email !== undefined) {
+    const trimmed = String(email).trim().toLowerCase().slice(0, 120);
+    if (trimmed && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(trimmed)) {
+      return res.status(400).json({ error: "Email ঠিকমতো দিন (e.g. you@example.com)" });
+    }
+    newEmail = trimmed || null;
+  }
+
+  /* phone validation (BD-friendly: 01XXXXXXXXX or +8801XXXXXXXXX, 10–15 digits) */
+  let newPhone = cur.phone;
+  if (phone !== undefined) {
+    const trimmed = String(phone).trim().slice(0, 20);
+    if (trimmed) {
+      const digits = trimmed.replace(/[^\d]/g, "");
+      if (digits.length < 10 || digits.length > 15) {
+        return res.status(400).json({ error: "Phone সংখ্যা ১০–১৫ digit হতে হবে" });
+      }
+      newPhone = trimmed;
+    } else {
+      newPhone = null;
+    }
+  }
+
   await db.prepare(
-    "UPDATE admins SET username = ?, password = ?, display_name = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
-  ).run(newUsername, newHash, newDisplay, cur.id);
+    "UPDATE admins SET username = ?, password = ?, display_name = ?, email = ?, phone = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
+  ).run(newUsername, newHash, newDisplay, newEmail, newPhone, cur.id);
 
   res.json({
     ok: true,
     username: newUsername,
-    display_name: newDisplay
+    display_name: newDisplay,
+    email: newEmail,
+    phone: newPhone
   });
 });
 

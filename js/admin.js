@@ -928,6 +928,8 @@
       .then(p => {
         document.getElementById("pUsername").value    = p.username || "";
         document.getElementById("pDisplayName").value = p.display_name || "";
+        document.getElementById("pEmail").value       = p.email || "";
+        document.getElementById("pPhone").value       = p.phone || "";
         document.getElementById("profileName").textContent = p.display_name || p.username || "Admin";
         document.getElementById("profileRole").textContent = p.role || "admin";
         const created = p.created_at ? p.created_at.slice(0,16).replace("T"," ") : "—";
@@ -937,6 +939,14 @@
           '<span><span class="ms">schedule</span> joined ' + esc(created) + '</span>' +
           '<span><span class="ms">login</span> last login ' + esc(last) + '</span>' +
           (src ? '<span style="opacity:.7;">' + esc(src) + '</span>' : '');
+        /* email + phone chips (only show if present) */
+        const contacts = document.getElementById("profileContacts");
+        if(contacts){
+          const c = [];
+          if(p.email) c.push('<a class="prof-chip" href="mailto:' + esc(p.email) + '"><span class="ms">mail</span>' + esc(p.email) + '</a>');
+          if(p.phone) c.push('<a class="prof-chip" href="tel:' + esc(p.phone) + '"><span class="ms">call</span>' + esc(p.phone) + '</a>');
+          contacts.innerHTML = c.join("");
+        }
         /* also update sidebar admin name + role + avatar */
         const sbName = document.getElementById("sbUserName");
         if(sbName) sbName.textContent = p.display_name || p.username || "Admin";
@@ -961,6 +971,8 @@
     const note = document.getElementById("profileNote");
     const u = document.getElementById("pUsername").value.trim();
     const dn = document.getElementById("pDisplayName").value.trim();
+    const em = document.getElementById("pEmail").value.trim();
+    const ph = document.getElementById("pPhone").value.trim();
     const cur = document.getElementById("pCurrentPass").value;
     const np  = document.getElementById("pNewPass").value;
     const cp  = document.getElementById("pConfirmPass").value;
@@ -969,7 +981,7 @@
     if(np && np !== cp){ return showNote(note, false, "নতুন password দুটি মিলছে না"); }
     if(np && !cur){ return showNote(note, false, "Password বদলাতে হলে current password দিতে হবে"); }
 
-    const body = { username: u, display_name: dn };
+    const body = { username: u, display_name: dn, email: em, phone: ph };
     if(np){ body.current_password = cur; body.new_password = np; }
 
     fetch("/api/admin/profile", {

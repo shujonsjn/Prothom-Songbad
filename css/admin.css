@@ -1318,6 +1318,35 @@ button:disabled{ opacity:.38; pointer-events:none; }
 }
 .profile-note b{ font-weight:700; }
 
+.prof-chip{
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  padding:5px 11px;
+  border-radius:999px;
+  background:var(--md-primary-cont);
+  color:var(--md-on-primary-cont);
+  font-size:12px;
+  font-weight:500;
+  text-decoration:none;
+  transition:background .15s, transform .15s;
+  font-family:"Roboto", sans-serif;
+  max-width:100%;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.prof-chip:hover{
+  background:var(--md-primary);
+  color:var(--md-on-primary);
+  transform:translateY(-1px);
+}
+.prof-chip .ms{
+  font-size:14px;
+  vertical-align:-2px;
+  color:inherit;
+}
+
 #profileForm .field{ margin-top:0; margin-bottom:14px; }
 #profileForm h4{
   display:flex;
