@@ -91,6 +91,10 @@
     if(!text || !text.trim()){
       return '<p class="article-empty">বিস্তারিত পঠ্যক্ষণ চলছে…</p>';
     }
+    /* if text already contains HTML (from cron), trust and return as-is */
+    if(/<[a-z][\s\S]*>/i.test(text)){
+      return text;
+    }
     /* normalize: ensure sentence-end punctuation, split into sentences */
     const normalized = text.replace(/\s+/g, " ").trim();
     const sentences = splitSentences(normalized);
