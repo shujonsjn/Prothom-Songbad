@@ -196,6 +196,12 @@ img{display:block;max-width:100%}
   grid-template-columns:2fr 1fr;
   gap:28px;
 }
+.container > main{
+  border-right:1px solid #d4cfc2;
+  margin-right:-14px;
+  padding-right:42px;
+  min-width:0;
+}
 
 /* ===== CATEGORY TITLE (red, big) ===== */
 .cat-title{
@@ -1754,6 +1760,7 @@ body.news-paper{ background:#ffffff; }
 }
 @media(max-width:900px){
   .container{grid-template-columns:1fr;gap:22px}
+  .container > main{ border-right:none; margin-right:0; padding-right:0; }
   .news-grid{grid-template-columns:1fr}
   .hero img{height:280px}
   .hero h1{font-size:28px}
