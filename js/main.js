@@ -144,6 +144,7 @@
     if(news.length === 0) return "";
     const big   = news[0];
     const med1  = news[1];
+    const med2  = news[2];
 
     const bigHtml = `
       <article class="hero-big" onclick="openNews(${big.id})">
@@ -162,7 +163,7 @@
       </article>`;
 
     const medHtml = (n) => n ? `
-      <article class="hero-med hero-med-tall" onclick="openNews(${n.id})">
+      <article class="hero-med" onclick="openNews(${n.id})">
         <div class="hero-med-img">
           <img src="${esc(n.image)}" alt="" loading="lazy">
           <div class="hero-med-img-shade"></div>
@@ -172,16 +173,13 @@
         <div class="hero-med-body">
           <div class="hero-kicker-sm">${esc(n.category || "সর্বশেষ")}</div>
           <h3 class="hero-med-title">${esc(n.title)}</h3>
-          <p class="hero-med-excerpt">${esc((n.details || "").slice(0, 180))}…</p>
+          <p class="hero-med-excerpt">${esc((n.details || "").slice(0, 120))}…</p>
           <div class="hero-med-meta">
             <span>${esc(timeAgo(n.created_at))}</span>
             <span class="hero-med-arrow">→</span>
           </div>
         </div>
       </article>` : "";
-
-    const sectionTitle = (activeCat && activeCat !== "all") ? activeCat : "প্রধান সংবাদ";
-    const sectionTag   = (activeCat && activeCat !== "all") ? activeCat.toUpperCase() : "TOP STORIES";
 
     return `
       <section class="hero-section">
@@ -192,6 +190,7 @@
           <div class="hero-left">${bigHtml}</div>
           <div class="hero-right">
             ${medHtml(med1)}
+            ${medHtml(med2)}
           </div>
         </div>
       </section>`;
