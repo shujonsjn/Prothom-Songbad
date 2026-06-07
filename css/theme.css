@@ -403,13 +403,6 @@ img{display:block;max-width:100%}
   align-items:flex-end;
   border:none;
   box-shadow:0 6px 20px rgba(0,0,0,.12);
-  transition: box-shadow .25s, transform .25s;
-}
-.hero-big:hover{
-  transform:translateY(-2px);
-}
-.hero-big:hover{
-  box-shadow:0 12px 32px rgba(193,19,29,.18);
 }
 .hero-big img{
   position:absolute;
@@ -418,9 +411,7 @@ img{display:block;max-width:100%}
   height:100%;
   object-fit:cover;
   object-position: center 30%;
-  transition: transform .5s ease;
 }
-.hero-big:hover img{ transform:scale(1.05); }
 .hero-big-overlay{
   position:absolute;
   inset:0;
@@ -449,10 +440,7 @@ img{display:block;max-width:100%}
   padding:24px 28px 28px;
   background:linear-gradient(180deg, transparent 0%, rgba(0,0,0,.55) 30%, rgba(0,0,0,.92) 100%);
   color:#fff;
-  transform:translateY(0);
-  transition: transform .3s;
 }
-.hero-big:hover .hero-big-title{ transform:translateY(-4px); }
 .hero-kicker{
   display:inline-block;
   font-family:'Hind Siliguri',sans-serif;
@@ -500,11 +488,6 @@ img{display:block;max-width:100%}
   border:1px solid rgba(255,255,255,.4);
   border-radius:12px;
   font-size:11.5px;
-  transition: all .2s;
-}
-.hero-big:hover .hero-big-read{
-  background:#c1131d;
-  border-color:#c1131d;
 }
 .hero-vid{
   position:absolute;
@@ -532,24 +515,8 @@ img{display:block;max-width:100%}
   flex-direction:column;
   min-height:0;
   box-shadow:0 4px 16px rgba(0,0,0,.06);
-  transition: box-shadow .25s, transform .25s;
   position:relative;
 }
-.hero-med::after{
-  content:"";
-  position:absolute;
-  top:0; left:0;
-  width:3px; height:100%;
-  background:linear-gradient(180deg, #c1131d 0%, #8a0a12 100%);
-  opacity:0;
-  transition: opacity .25s;
-  z-index:2;
-}
-.hero-med:hover{
-  box-shadow:0 10px 28px rgba(193,19,29,.15);
-  transform:translateY(-2px);
-}
-.hero-med:hover::after{ opacity:1; }
 .hero-med-img{
   position:relative;
   width:100%;
@@ -565,9 +532,7 @@ img{display:block;max-width:100%}
   height:100%;
   object-fit:cover;
   object-position: center 30%;
-  transition: transform .5s ease;
 }
-.hero-med:hover .hero-med-img img{ transform:scale(1.06); }
 .hero-med-img-shade{
   position:absolute;
   inset:0;
@@ -592,10 +557,8 @@ img{display:block;max-width:100%}
   margin:0;
   max-height:calc(1.3em * 3);
   color:#0a0a0a;
-  transition: color .2s;
   overflow:hidden;
 }
-.hero-med:hover .hero-med-title{ color:#c1131d; }
 .hero-med-meta{
   font-family:'Hind Siliguri',sans-serif;
   font-size:11px;
