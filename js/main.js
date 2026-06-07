@@ -149,13 +149,10 @@
         <img src="${esc(big.image)}" alt="" loading="eager">
         <div class="hero-big-overlay"></div>
         ${big.video ? `<span class="hero-vid">▶ ভিডিও</span>` : ""}
-        <div class="hero-big-corner">★ এক্সক্লুসিভ</div>
         <div class="hero-big-title">
-          <div class="hero-kicker">${esc(big.category || "সর্বশেষ")}</div>
           <h2>${esc(big.title)}</h2>
           <div class="hero-big-meta">
             <span class="hero-big-time">${esc(timeAgo(big.created_at))}</span>
-            <span class="hero-big-read">বিস্তারিত পড়ুন →</span>
           </div>
         </div>
       </article>`;
@@ -166,12 +163,10 @@
           <img src="${esc(n.image)}" alt="" loading="lazy">
           <div class="hero-med-img-shade"></div>
           ${n.video ? `<span class="hero-vid-sm">▶</span>` : ""}
-          <div class="hero-med-img-cap">ছবি: সংগৃহীত</div>
         </div>
         <div class="hero-med-body">
           <h3 class="hero-med-title">${esc(n.title)}</h3>
           <div class="hero-med-meta">
-            <span class="hero-med-cat">${esc(n.category || "সর্বশেষ")}</span>
             <span class="hero-med-time">${esc(timeAgo(n.created_at))}</span>
           </div>
         </div>
