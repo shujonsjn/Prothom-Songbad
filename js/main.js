@@ -286,11 +286,7 @@
     /* Hero (first 3) + grid (rest) */
     const heroNews = data.slice(0, 3);
     const gridNews = data.slice(3);
-    let html = "";
-    if(activeCat && activeCat !== "all"){
-      html += renderCategoryBanner(activeCat, data.length);
-    }
-    html += renderHero(heroNews);
+    let html = renderHero(heroNews);
     if(gridNews.length){
       html += `<div class="card-grid">${gridNews.map(renderCard).join("")}</div>`;
     }
