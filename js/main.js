@@ -106,8 +106,6 @@
         </div>
         <div class="card-body">
           <h2 class="card-title">
-            <span class="card-cat">${cat}</span>
-            <span class="card-sep">•</span>
             <span class="card-text">${title}</span>
           </h2>
           <p class="card-excerpt">${excerpt}…</p>
