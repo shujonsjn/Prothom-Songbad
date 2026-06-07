@@ -385,8 +385,8 @@ export default async function handler(req, res) {
     for (const it of articles) {
       const cat = it.category || "সর্বশেষ";
       const details = it.summary
-        ? `${it.summary}\n\n— সারসংক্ষেপ: Prothom Alo (${it.link})`
-        : `Prothom Alo থেকে সংগৃহীত।\nসূত্র: ${it.link}`;
+        ? `${it.summary}\n\n— সারসংক্ষেপ: ${it.link}`
+        : `সূত্র: ${it.link}`;
 
       const existing = await get(
         "SELECT id, details, video, subcategory FROM news WHERE title = ? LIMIT 1",
@@ -398,7 +398,7 @@ export default async function handler(req, res) {
         const needsSub     = !existing.subcategory && it.subcategory;
         if (needsDetails || needsVideo || needsSub) {
           const newDetails = needsDetails
-            ? `${it.summary}\n\n— সারসংক্ষেপ: Prothom Alo (${it.link})`.slice(0, 2000)
+            ? `${it.summary}\n\n— সারসংক্ষেপ: ${it.link}`.slice(0, 2000)
             : existing.details;
           const newVideo = needsVideo ? it.video : existing.video;
           const newSub   = needsSub   ? it.subcategory : existing.subcategory;
