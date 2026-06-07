@@ -125,11 +125,16 @@
     const bigHtml = `
       <article class="hero-big" onclick="openNews(${big.id})">
         <img src="${esc(big.image)}" alt="" loading="eager">
-        ${big.video ? `<span class="hero-vid">▶</span>` : ""}
+        <div class="hero-big-overlay"></div>
+        ${big.video ? `<span class="hero-vid">▶ ভিডিও</span>` : ""}
+        <div class="hero-big-corner">★ এক্সক্লুসিভ</div>
         <div class="hero-big-title">
           <div class="hero-kicker">${esc(big.category || "সর্বশেষ")}</div>
           <h2>${esc(big.title)}</h2>
-          <div class="hero-big-meta"><span>${esc(timeAgo(big.created_at))}</span></div>
+          <div class="hero-big-meta">
+            <span class="hero-big-time">${esc(timeAgo(big.created_at))}</span>
+            <span class="hero-big-read">বিস্তারিত পড়ুন →</span>
+          </div>
         </div>
       </article>`;
 
@@ -137,6 +142,7 @@
       <article class="hero-med hero-med-tall" onclick="openNews(${n.id})">
         <div class="hero-med-img">
           <img src="${esc(n.image)}" alt="" loading="lazy">
+          <div class="hero-med-img-shade"></div>
           ${n.video ? `<span class="hero-vid-sm">▶</span>` : ""}
           <div class="hero-med-img-cap">ছবি: সংগৃহীত</div>
         </div>
@@ -144,15 +150,21 @@
           <div class="hero-kicker-sm">${esc(n.category || "সর্বশেষ")}</div>
           <h3 class="hero-med-title">${esc(n.title)}</h3>
           <p class="hero-med-excerpt">${esc((n.details || "").slice(0, 180))}…</p>
-          <div class="hero-med-meta">${esc(timeAgo(n.created_at))}</div>
+          <div class="hero-med-meta">
+            <span>${esc(timeAgo(n.created_at))}</span>
+            <span class="hero-med-arrow">→</span>
+          </div>
         </div>
       </article>` : "";
 
     return `
       <section class="hero-section">
       <div class="section-bar">
+        <span class="section-icon">◆</span>
         <h2 class="section-title">প্রধান সংবাদ</h2>
+        <span class="section-icon">◆</span>
         <div class="section-bar-line"></div>
+        <span class="section-tag">TOP STORIES</span>
       </div>
         <div class="hero-block">
           <div class="hero-left">${bigHtml}</div>
