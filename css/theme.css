@@ -1835,6 +1835,6 @@ body.news-paper{ background:#ffffff; }
 #mediaSlot::after{
   width:240px;
   height:56px;
-  bottom:16px;
+  bottom:4px;
   right:16px;
 }
