@@ -171,12 +171,10 @@
           <div class="hero-med-img-cap">ছবি: সংগৃহীত</div>
         </div>
         <div class="hero-med-body">
-          <div class="hero-kicker-sm">${esc(n.category || "সর্বশেষ")}</div>
           <h3 class="hero-med-title">${esc(n.title)}</h3>
-          <p class="hero-med-excerpt">${esc((n.details || "").slice(0, 120))}…</p>
           <div class="hero-med-meta">
-            <span>${esc(timeAgo(n.created_at))}</span>
-            <span class="hero-med-arrow">→</span>
+            <span class="hero-med-cat">${esc(n.category || "সর্বশেষ")}</span>
+            <span class="hero-med-time">${esc(timeAgo(n.created_at))}</span>
           </div>
         </div>
       </article>` : "";
