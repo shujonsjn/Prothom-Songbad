@@ -409,9 +409,9 @@ img{display:block;max-width:100%}
   height:100%;
   object-fit:cover;
   object-position: center 30%;
-  transition: transform .4s ease;
+  transition: transform .5s ease;
 }
-.hero-big:hover img{ transform:scale(1.04); }
+.hero-big:hover img{ transform:scale(1.06); }
 .hero-big-overlay{
   position:absolute;
   inset:0;
@@ -516,7 +516,20 @@ img{display:block;max-width:100%}
   min-height:0;
   position:relative;
 }
-.hero-med:hover .hero-med-img img{ transform:scale(1.04); }
+.hero-med::after{
+  content:"";
+  position:absolute;
+  bottom:0; left:0; right:0;
+  height:3px;
+  background:#c1131d;
+  transform:scaleX(0);
+  transform-origin:left;
+  transition: transform .3s ease;
+  z-index:3;
+}
+.hero-med:hover::after{ transform:scaleX(1); }
+.hero-med:hover .hero-med-img img{ transform:scale(1.06); }
+.hero-med:hover .hero-med-title{ color:#c1131d; }
 .hero-med-img{
   position:relative;
   width:100%;
@@ -532,7 +545,7 @@ img{display:block;max-width:100%}
   height:100%;
   object-fit:cover;
   object-position: center 30%;
-  transition: transform .4s ease;
+  transition: transform .5s ease;
 }
 .hero-med-img-shade{
   position:absolute;
@@ -559,6 +572,7 @@ img{display:block;max-width:100%}
   max-height:calc(1.3em * 3);
   color:#0a0a0a;
   overflow:hidden;
+  transition: color .25s ease;
 }
 .hero-med-meta{
   font-family:'Hind Siliguri',sans-serif;
