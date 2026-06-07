@@ -695,16 +695,17 @@
   function renderSubCatList(){
     if(!subCatList) return;
     subCatList.innerHTML = "";
-    if(subCatsCache.length === 0){
-      subCatList.innerHTML = `<div class="empty" style="font-size:14px;padding:20px;">কোনো sub-category নেই — উপরে থেকে যোগ করুন</div>`;
-      return;
-    }
-    /* parent category অনুযায়ী group */
+
+    /* parent category অনুযায়ী group — সব parent দেখাই, এমনকি sub-category না থাকলেও */
     const grouped = {};
+    for (const c of categoriesCache) {
+      grouped[c.category] = [];
+    }
     for (const s of subCatsCache) {
       if (!grouped[s.category]) grouped[s.category] = [];
       grouped[s.category].push(s);
     }
+
     const palette = [
       { bg:"#f9dedc", fg:"#b3261e" },
       { bg:"#e8def8", fg:"#6750a4" },
@@ -715,9 +716,11 @@
       { bg:"#d8e6ff", fg:"#1a237e" }
     ];
     let pi = 0;
-    for (const cat of Object.keys(grouped).sort()){
+    /* sort by categoriesCache order (sort_order) */
+    for (const c of categoriesCache) {
+      const cat = c.category;
       const color = palette[pi++ % palette.length];
-      const items = grouped[cat];
+      const items = grouped[cat] || [];
       const block = document.createElement("div");
       block.className = "subcat-group";
       block.style.setProperty("--sc-bg", color.bg);
@@ -730,14 +733,21 @@
 
       const chips = document.createElement("div");
       chips.className = "subcat-chips";
-      items.forEach(s => {
-        const chip = document.createElement("div");
-        chip.className = "subcat-chip";
-        const cnt = s.newsCount ? '<span class="subcat-chip-count">' + s.newsCount + '</span>' : '';
-        chip.innerHTML = '<span class="subcat-chip-label">' + esc(s.name) + '</span>' + cnt + '<button class="subcat-chip-x" title="মুছুন" aria-label="Delete"><span class="ms" style="font-size:16px;line-height:1;">close</span></button>';
-        chip.querySelector(".subcat-chip-x").addEventListener("click", () => deleteSubCategory(s.id, s.name));
-        chips.appendChild(chip);
-      });
+      if (items.length === 0) {
+        const empty = document.createElement("div");
+        empty.className = "subcat-empty";
+        empty.textContent = "কোনো sub-category নেই — উপরে থেকে যোগ করুন";
+        chips.appendChild(empty);
+      } else {
+        items.forEach(s => {
+          const chip = document.createElement("div");
+          chip.className = "subcat-chip";
+          const cnt = s.newsCount ? '<span class="subcat-chip-count">' + s.newsCount + '</span>' : '';
+          chip.innerHTML = '<span class="subcat-chip-label">' + esc(s.name) + '</span>' + cnt + '<button class="subcat-chip-x" title="মুছুন" aria-label="Delete"><span class="ms" style="font-size:16px;line-height:1;">close</span></button>';
+          chip.querySelector(".subcat-chip-x").addEventListener("click", () => deleteSubCategory(s.id, s.name));
+          chips.appendChild(chip);
+        });
+      }
       block.appendChild(chips);
       subCatList.appendChild(block);
     }

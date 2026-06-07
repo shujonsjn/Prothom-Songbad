@@ -1016,6 +1016,14 @@ button:disabled{ opacity:.38; pointer-events:none; }
   display:flex;
   flex-wrap:wrap;
   gap:8px;
+  min-height:34px;
+  align-items:center;
+}
+.subcat-empty{
+  font-size:13px;
+  color:var(--md-on-surface-var);
+  font-style:italic;
+  padding:4px 0;
 }
 .subcat-chip{
   display:inline-flex;
