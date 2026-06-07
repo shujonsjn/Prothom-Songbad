@@ -341,6 +341,39 @@ img{display:block;max-width:100%}
   background:linear-gradient(90deg, #c1131d 0%, #c1131d 100px, rgba(193,19,29,.4) 160px, #d4cfc2 240px, #d4cfc2 100%);
 }
 
+/* ===== SECTION HEADING (Prothom Alo style: red label + line) ===== */
+.section-heading{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  margin:30px 0 18px;
+  position:relative;
+}
+.section-heading-label{
+  font-family:'Hind Siliguri','Noto Serif Bengali',sans-serif;
+  font-size:20px;
+  font-weight:700;
+  color:#0a0a0a;
+  letter-spacing:.01em;
+  white-space:nowrap;
+  position:relative;
+  padding-left:14px;
+}
+.section-heading-label::before{
+  content:"";
+  position:absolute;
+  left:0; top:50%;
+  transform:translateY(-50%);
+  width:5px; height:22px;
+  background:linear-gradient(180deg, #c1131d 0%, #8a0a12 100%);
+  border-radius:1px;
+}
+.section-heading-line{
+  flex:1;
+  height:1px;
+  background:linear-gradient(90deg, #d4cfc2 0%, #d4cfc2 100%);
+}
+
 /* ===== HERO BLOCK (1 big + 1 tall) ===== */
 .hero-block{
   display:grid;

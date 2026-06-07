@@ -279,13 +279,30 @@
 
     /* Category title removed — sub-strip already shows the category name */
 
-    /* Hero (first 3) + grid (rest) */
+    /* Hero (first 3) + grid sections (Prothom Alo style) */
     const heroNews = data.slice(0, 3);
-    const gridNews = data.slice(3);
+    const restNews = data.slice(3);
+    const latestNews = restNews.slice(0, 6);
+    const popularNews = restNews.slice(6, 12);
+    const moreNews = restNews.slice(12);
+
     let html = renderHero(heroNews);
-    if(gridNews.length){
-      html += `<div class="card-grid">${gridNews.map(renderCard).join("")}</div>`;
+
+    if(latestNews.length){
+      html += `<div class="section-heading"><span class="section-heading-label">সর্বশেষ</span><span class="section-heading-line"></span></div>`;
+      html += `<div class="card-grid">${latestNews.map(renderCard).join("")}</div>`;
     }
+
+    if(popularNews.length){
+      html += `<div class="section-heading"><span class="section-heading-label">জনপ্রিয়</span><span class="section-heading-line"></span></div>`;
+      html += `<div class="card-grid">${popularNews.map(renderCard).join("")}</div>`;
+    }
+
+    if(moreNews.length){
+      html += `<div class="section-heading"><span class="section-heading-label">আরও খবর</span><span class="section-heading-line"></span></div>`;
+      html += `<div class="card-grid">${moreNews.map(renderCard).join("")}</div>`;
+    }
+
     mainNews.innerHTML = html;
 
     /* Slider: 3 pages × 3 news (news 4-12) */
