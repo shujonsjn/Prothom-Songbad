@@ -7,7 +7,7 @@
 import { createClient } from "@libsql/client";
 
 const FEED_URL    = "https://www.prothomalo.com/feed/";
-const MAX_SUMMARY_CHARS = 420;
+const MAX_SUMMARY_CHARS = 2000;
 const PER_CATEGORY_LIMIT = 2;
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
