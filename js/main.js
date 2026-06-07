@@ -117,6 +117,29 @@
   }
 
   /* Hero block — 1 big (left) + 1 tall medium card (right) with newspaper-style frame */
+  function renderCategoryBanner(catName, totalCount){
+    const today = new Date();
+    const dateStr = today.toLocaleDateString("bn-BD",{
+      weekday:"long", year:"numeric", month:"long", day:"numeric"
+    });
+    return `
+      <section class="cat-banner">
+        <div class="cat-banner-top">
+          <div class="cat-banner-meta">
+            <span class="cat-banner-eyebrow">ক্যাটাগরি</span>
+            <span class="cat-banner-date">${esc(dateStr)}</span>
+          </div>
+          <div class="cat-banner-count">
+            <strong>${totalCount}</strong>
+            <span>টি সংবাদ</span>
+          </div>
+        </div>
+        <h1 class="cat-banner-title">${esc(catName)}</h1>
+        <div class="cat-banner-underline"></div>
+        <p class="cat-banner-tagline">${esc(catName)} ক্যাটাগরির সর্বশেষ ও জনপ্রিয় সংবাদ, বিশ্লেষণ ও প্রতিবেদন</p>
+      </section>`;
+  }
+
   function renderHero(news){
     if(news.length === 0) return "";
     const big   = news[0];
@@ -157,14 +180,17 @@
         </div>
       </article>` : "";
 
+    const sectionTitle = (activeCat && activeCat !== "all") ? activeCat : "প্রধান সংবাদ";
+    const sectionTag   = (activeCat && activeCat !== "all") ? activeCat.toUpperCase() : "TOP STORIES";
+
     return `
       <section class="hero-section">
       <div class="section-bar">
         <span class="section-icon">◆</span>
-        <h2 class="section-title">প্রধান সংবাদ</h2>
+        <h2 class="section-title">${esc(sectionTitle)}</h2>
         <span class="section-icon">◆</span>
         <div class="section-bar-line"></div>
-        <span class="section-tag">TOP STORIES</span>
+        <span class="section-tag">${esc(sectionTag)}</span>
       </div>
         <div class="hero-block">
           <div class="hero-left">${bigHtml}</div>
@@ -260,7 +286,11 @@
     /* Hero (first 3) + grid (rest) */
     const heroNews = data.slice(0, 3);
     const gridNews = data.slice(3);
-    let html = renderHero(heroNews);
+    let html = "";
+    if(activeCat && activeCat !== "all"){
+      html += renderCategoryBanner(activeCat, data.length);
+    }
+    html += renderHero(heroNews);
     if(gridNews.length){
       html += `<div class="card-grid">${gridNews.map(renderCard).join("")}</div>`;
     }

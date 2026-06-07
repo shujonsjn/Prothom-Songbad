@@ -119,59 +119,100 @@ img{display:block;max-width:100%}
 /* ===== SUB-CATEGORY STRIP (top, just below nav) ===== */
 .sub-strip{
   background:#fff;
-  border-bottom:1px solid #e8e2d4;
+  border-bottom:2px solid #0a0a0a;
   border-top:1px solid #f4efe2;
-  padding:14px 20px;
+  padding:0 20px;
   display:none;
+  position:relative;
+}
+.sub-strip::after{
+  content:"";
+  position:absolute;
+  left:0; right:0; bottom:-4px; height:1px;
+  background:#0a0a0a;
 }
 .sub-strip-inner{
   max-width:1300px;
   margin:0 auto;
   display:flex;
   align-items:center;
-  gap:18px;
+  gap:0;
   flex-wrap:wrap;
+  padding:0;
 }
 .sub-strip-label{
   font-family:'Hind Siliguri',sans-serif;
   font-weight:700;
-  font-size:20px;
-  color:#c1131d;
+  font-size:17px;
+  color:#fff;
+  background:#c1131d;
   letter-spacing:.01em;
+  padding:12px 18px;
+  margin-right:14px;
+  position:relative;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  font-size:13px;
+}
+.sub-strip-label::after{
+  content:"";
+  position:absolute;
+  right:-10px; top:0;
+  border-left:10px solid #c1131d;
+  border-top:21px solid transparent;
+  border-bottom:21px solid transparent;
 }
 .sub-strip-list{
   display:flex;
   align-items:center;
   flex-wrap:wrap;
-  gap:6px 8px;
+  gap:0;
 }
 .sub-strip-link{
   font-family:'Hind Siliguri',sans-serif;
-  font-size:15px;
-  font-weight:500;
-  color:#2a2a2a;
+  font-size:14.5px;
+  font-weight:600;
+  color:#0a0a0a;
   text-decoration:none;
-  padding:4px 8px;
-  border-radius:3px;
+  padding:14px 14px;
+  border-right:1px solid #e8e2d4;
   transition: background .15s, color .15s;
+  position:relative;
+  display:inline-flex;
+  align-items:center;
+}
+.sub-strip-link:first-child{
+  border-left:1px solid #e8e2d4;
 }
 .sub-strip-link:hover{
   background:#fdecee;
   color:#c1131d;
 }
-.sub-strip-link.active{
+.sub-strip-link:hover::after{
+  content:"";
+  position:absolute;
+  left:0; right:0; bottom:0;
+  height:3px;
   background:#c1131d;
-  color:#fff;
+}
+.sub-strip-link.active{
+  color:#c1131d;
+  background:#fdecee;
+}
+.sub-strip-link.active::after{
+  content:"";
+  position:absolute;
+  left:0; right:0; bottom:0;
+  height:3px;
+  background:#c1131d;
 }
 .sub-strip-dot{
-  color:#bbb;
-  font-size:14px;
-  user-select:none;
+  display:none;
 }
 @media (max-width: 640px){
-  .sub-strip{ padding:10px 14px; }
-  .sub-strip-label{ font-size:16px; }
-  .sub-strip-link{ font-size:13px; }
+  .sub-strip{ padding:0 10px; }
+  .sub-strip-label{ font-size:12px; padding:10px 12px; }
+  .sub-strip-link{ font-size:12.5px; padding:10px 10px; }
 }
 
 /* ===== MAIN LAYOUT ===== */
@@ -196,6 +237,107 @@ img{display:block;max-width:100%}
 }
 @media (max-width:760px){
   .cat-title{ font-size:38px; }
+}
+
+/* ===== CATEGORY PAGE BANNER (Prothom Alo style) ===== */
+.cat-banner{
+  background:#fafaf5;
+  border:1px solid #e8e2d4;
+  border-top:5px double #c1131d;
+  border-bottom:1px solid #e8e2d4;
+  padding:22px 28px 24px;
+  margin-bottom:24px;
+  position:relative;
+  box-shadow:0 4px 16px rgba(10,10,10,.04);
+}
+.cat-banner::before{
+  content:"";
+  position:absolute;
+  top:0; left:0; right:0; height:1px;
+  background:linear-gradient(90deg, #c1131d 0%, #c1131d 120px, transparent 120px);
+}
+.cat-banner-top{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:10px;
+  font-family:'Hind Siliguri',sans-serif;
+  font-size:12px;
+  color:#888;
+  letter-spacing:.04em;
+  padding-bottom:10px;
+  border-bottom:1px dashed #d4cfc2;
+}
+.cat-banner-meta{
+  display:flex;
+  align-items:center;
+  gap:14px;
+}
+.cat-banner-eyebrow{
+  background:#c1131d;
+  color:#fff;
+  font-weight:700;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  padding:3px 10px;
+  font-size:10.5px;
+  border-radius:1px;
+}
+.cat-banner-date{
+  font-weight:500;
+  color:#5a5a5a;
+}
+.cat-banner-count{
+  display:flex;
+  align-items:baseline;
+  gap:5px;
+  color:#5a5a5a;
+  font-size:12px;
+}
+.cat-banner-count strong{
+  font-family:'Noto Serif Bengali',serif;
+  font-size:22px;
+  font-weight:900;
+  color:#c1131d;
+  line-height:1;
+}
+.cat-banner-title{
+  font-family:'Noto Serif Bengali','Hind Siliguri',serif;
+  font-size:56px;
+  font-weight:900;
+  color:#0a0a0a;
+  line-height:1.05;
+  margin:6px 0 8px;
+  letter-spacing:-0.015em;
+  display:inline-flex;
+  align-items:center;
+  gap:18px;
+}
+.cat-banner-title::before{
+  content:"";
+  display:inline-block;
+  width:8px; height:48px;
+  background:linear-gradient(180deg, #c1131d 0%, #8a0a12 100%);
+  border-radius:1px;
+}
+.cat-banner-underline{
+  height:2px;
+  background:linear-gradient(90deg, #c1131d 0%, #c1131d 200px, rgba(193,19,29,.3) 300px, transparent 400px);
+  margin-bottom:10px;
+}
+.cat-banner-tagline{
+  font-family:'Hind Siliguri',sans-serif;
+  font-size:14px;
+  color:#5a5a5a;
+  margin:0;
+  line-height:1.5;
+  max-width:720px;
+}
+@media (max-width:760px){
+  .cat-banner{ padding:18px 20px 20px; }
+  .cat-banner-title{ font-size:38px; }
+  .cat-banner-title::before{ width:6px; height:32px; }
+  .cat-banner-top{ flex-direction:column; align-items:flex-start; gap:6px; }
 }
 
 /* ===== HERO SECTION (newspaper-style frame) ===== */
