@@ -422,8 +422,8 @@ img{display:block;max-width:100%}
   position:absolute;
   bottom:0;
   right:0;
-  width:220px;
-  height:50px;
+  width:140px;
+  height:36px;
   background:#ffffff;
   pointer-events:none;
   z-index:4;
@@ -569,8 +569,8 @@ img{display:block;max-width:100%}
   position:absolute;
   bottom:0;
   right:0;
-  width:160px;
-  height:36px;
+  width:90px;
+  height:24px;
   background:#ffffff;
   pointer-events:none;
   z-index:2;
@@ -826,8 +826,8 @@ img{display:block;max-width:100%}
   position:absolute;
   bottom:0;
   right:0;
-  width:65px;
-  height:22px;
+  width:55px;
+  height:16px;
   background:#ffffff;
   pointer-events:none;
 }
@@ -901,8 +901,8 @@ img{display:block;max-width:100%}
   position:absolute;
   bottom:0;
   right:0;
-  width:180px;
-  height:40px;
+  width:100px;
+  height:26px;
   background:#ffffff;
   pointer-events:none;
   z-index:2;
