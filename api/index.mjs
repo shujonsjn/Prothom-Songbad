@@ -143,10 +143,14 @@ let schemaReady = (async () => {
       link_url    TEXT,
       active      INTEGER DEFAULT 1,
       sort_order  INTEGER DEFAULT 0,
+      width       INTEGER,
+      height      INTEGER,
       created_at  DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
   try { await db.exec("CREATE INDEX IF NOT EXISTS idx_banners_pos ON banners(position, active, sort_order)"); } catch {}
+  try { await db.exec("ALTER TABLE banners ADD COLUMN width INTEGER"); } catch {}
+  try { await db.exec("ALTER TABLE banners ADD COLUMN height INTEGER"); } catch {}
 
   /* First run: seed default admin from env vars (bcrypt-hashed). Existing
      DBs won't be touched. */
@@ -496,8 +500,8 @@ app.get("/api/banners", async (req, res) => {
   try {
     const pos = (req.query.position || "").trim();
     const sql = pos
-      ? "SELECT id, position, title, image_url, link_url, active, sort_order, created_at FROM banners WHERE position = ? AND active = 1 ORDER BY sort_order ASC, id ASC"
-      : "SELECT id, position, title, image_url, link_url, active, sort_order, created_at FROM banners ORDER BY position ASC, sort_order ASC, id ASC";
+      ? "SELECT id, position, title, image_url, link_url, active, sort_order, width, height, created_at FROM banners WHERE position = ? AND active = 1 ORDER BY sort_order ASC, id ASC"
+      : "SELECT id, position, title, image_url, link_url, active, sort_order, width, height, created_at FROM banners ORDER BY position ASC, sort_order ASC, id ASC";
     const args = pos ? [pos] : [];
     const rows = await db.prepare(sql).all(...args);
     res.json(rows);
@@ -509,7 +513,7 @@ app.get("/api/banners", async (req, res) => {
 app.post("/api/banners", requireAuth, async (req, res) => {
   await ready();
   try {
-    const { position, title, image_url, link_url, active, sort_order } = req.body || {};
+    const { position, title, image_url, link_url, active, sort_order, width, height } = req.body || {};
     if (!position || !ALLOWED_BANNER_POS.includes(position)) {
       return res.status(400).json({ error: "Invalid position" });
     }
@@ -517,14 +521,16 @@ app.post("/api/banners", requireAuth, async (req, res) => {
       return res.status(400).json({ error: "Image URL দিতে হবে" });
     }
     const r = await db.prepare(
-      "INSERT INTO banners (position, title, image_url, link_url, active, sort_order) VALUES (?, ?, ?, ?, ?, ?)"
+      "INSERT INTO banners (position, title, image_url, link_url, active, sort_order, width, height) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
     ).run(
       position,
       (title || "").trim().slice(0, 200) || null,
       String(image_url).trim(),
       (link_url || "").trim().slice(0, 500) || null,
       active === false || active === 0 ? 0 : 1,
-      Number(sort_order) || 0
+      Number(sort_order) || 0,
+      width  ? Number(width)  : null,
+      height ? Number(height) : null
     );
     res.json({ ok: true, id: r.lastInsertRowid });
   } catch (err) {
@@ -539,11 +545,11 @@ app.put("/api/banners/:id", requireAuth, async (req, res) => {
     if (!id) return res.status(400).json({ error: "Invalid id" });
     const cur = await db.prepare("SELECT * FROM banners WHERE id = ?").get(id);
     if (!cur) return res.status(404).json({ error: "Banner not found" });
-    const { position, title, image_url, link_url, active, sort_order } = req.body || {};
+    const { position, title, image_url, link_url, active, sort_order, width, height } = req.body || {};
     const pos = (position || cur.position);
     if (!ALLOWED_BANNER_POS.includes(pos)) return res.status(400).json({ error: "Invalid position" });
     await db.prepare(
-      "UPDATE banners SET position=?, title=?, image_url=?, link_url=?, active=?, sort_order=? WHERE id=?"
+      "UPDATE banners SET position=?, title=?, image_url=?, link_url=?, active=?, sort_order=?, width=?, height=? WHERE id=?"
     ).run(
       pos,
       (title !== undefined ? title : cur.title) || null,
@@ -551,6 +557,8 @@ app.put("/api/banners/:id", requireAuth, async (req, res) => {
       (link_url !== undefined ? link_url : cur.link_url) || null,
       active === undefined ? cur.active : (active === false || active === 0 ? 0 : 1),
       sort_order === undefined ? cur.sort_order : (Number(sort_order) || 0),
+      width  === undefined ? cur.width  : (width  ? Number(width)  : null),
+      height === undefined ? cur.height : (height ? Number(height) : null),
       id
     );
     res.json({ ok: true });

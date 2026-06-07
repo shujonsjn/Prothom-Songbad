@@ -357,9 +357,12 @@
     return rows.map(b => {
       const link = b.link_url || "#";
       const target = /^https?:\/\//i.test(link) && !link.startsWith(location.origin) ? ' target="_blank" rel="noopener"' : '';
+      const w = b.width  ? ' width="'  + Number(b.width)  + '"' : '';
+      const h = b.height ? ' height="' + Number(b.height) + '"' : '';
+      const style = (b.width || b.height) ? ' style="' + (b.width  ? 'max-width:'  + b.width  + 'px;' : '') + (b.height ? 'max-height:' + b.height + 'px;' : '') + (b.width ? 'width:' + b.width + 'px;' : '') + (b.height ? 'height:' + b.height + 'px;' : '') + '"' : '';
       return '<a class="sidebar-banner" href="' + esc(link) + '"' + target + ' data-pos="' + esc(b.position) + '">' +
         '<span class="sidebar-banner-label">বিজ্ঞাপন</span>' +
-        '<img src="' + esc(b.image_url) + '" alt="' + esc(b.title || "ad") + '" loading="lazy">' +
+        '<img src="' + esc(b.image_url) + '" alt="' + esc(b.title || "ad") + '" loading="lazy"' + w + h + style + '>' +
         (b.title ? '<span class="sidebar-banner-link">' + esc(b.title) + '</span>' : '') +
       '</a>';
     }).join("");

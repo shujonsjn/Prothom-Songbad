@@ -1376,6 +1376,8 @@
   const bnOrderEl  = document.getElementById("bnOrder");
   const bnImageEl  = document.getElementById("bnImage");
   const bnLinkEl   = document.getElementById("bnLink");
+  const bnWidthEl  = document.getElementById("bnWidth");
+  const bnHeightEl = document.getElementById("bnHeight");
   const bnActiveEl = document.getElementById("bnActive");
   const bnSaveBtn  = document.getElementById("bnSaveBtn");
   const bnPreviewWrap = document.getElementById("bnPreview");
@@ -1403,6 +1405,8 @@
     if(bnOrderEl)  bnOrderEl.value = "0";
     if(bnImageEl)  bnImageEl.value = "";
     if(bnLinkEl)   bnLinkEl.value = "";
+    if(bnWidthEl)  bnWidthEl.value = "";
+    if(bnHeightEl) bnHeightEl.value = "";
     if(bnActiveEl) bnActiveEl.checked = true;
     if(bnPreviewWrap) bnPreviewWrap.style.display = "none";
   }
@@ -1463,7 +1467,9 @@
       image_url: bnImageEl?.value || "",
       link_url: bnLinkEl?.value || "",
       active: !!bnActiveEl?.checked,
-      sort_order: Number(bnOrderEl?.value || 0)
+      sort_order: Number(bnOrderEl?.value || 0),
+      width:  bnWidthEl?.value  ? Number(bnWidthEl.value)  : null,
+      height: bnHeightEl?.value ? Number(bnHeightEl.value) : null
     };
     if(!body.image_url || !/^https?:\/\//i.test(body.image_url)){
       return toast("Image URL দিতে হবে (http/https দিয়ে শুরু হতে হবে)", "error");
@@ -1497,6 +1503,8 @@
     if(bnOrderEl)  bnOrderEl.value = b.sort_order || 0;
     if(bnImageEl)  bnImageEl.value = b.image_url || "";
     if(bnLinkEl)   bnLinkEl.value = b.link_url || "";
+    if(bnWidthEl)  bnWidthEl.value  = b.width  || "";
+    if(bnHeightEl) bnHeightEl.value = b.height || "";
     if(bnActiveEl) bnActiveEl.checked = !!b.active;
     if(bnSaveBtn)  bnSaveBtn.innerHTML = '<span class="ms">save</span> Update Banner';
     updateBannerPreview();
