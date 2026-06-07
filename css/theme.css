@@ -1833,8 +1833,9 @@ body.news-paper{ background:#ffffff; }
   right:6px;
 }
 #mediaSlot::after{
-  width:120px;
-  height:28px;
-  bottom:12px;
-  right:12px;
+  width:240px;
+  height:56px;
+  bottom:16px;
+  left:16px;
+  right:auto;
 }
