@@ -319,8 +319,7 @@ img{display:block;max-width:100%}
   border-top:3px double #0a0a0a;
   padding:20px 20px 24px;
   margin-bottom:30px;
-  border-radius:2px;
-  box-shadow:0 4px 20px rgba(10,10,10,.05);
+  border-radius:0;
   position:relative;
 }
 .hero-section::before{
@@ -402,7 +401,6 @@ img{display:block;max-width:100%}
   display:flex;
   align-items:flex-end;
   border:none;
-  box-shadow:0 6px 20px rgba(0,0,0,.12);
 }
 .hero-big img{
   position:absolute;
@@ -514,7 +512,6 @@ img{display:block;max-width:100%}
   display:flex;
   flex-direction:column;
   min-height:0;
-  box-shadow:0 4px 16px rgba(0,0,0,.06);
   position:relative;
 }
 .hero-med-img{
