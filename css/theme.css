@@ -333,49 +333,12 @@ img{display:block;max-width:100%}
 .section-bar{
   display:flex;
   align-items:center;
-  gap:12px;
   margin-bottom:18px;
-}
-.section-icon{
-  color:#c1131d;
-  font-size:11px;
-  line-height:1;
-}
-.section-title{
-  font-family:'Hind Siliguri','Noto Serif Bengali',serif;
-  font-size:22px;
-  font-weight:700;
-  color:#0a0a0a;
-  margin:0;
-  letter-spacing:.01em;
-  white-space:nowrap;
-  position:relative;
-  padding-left:14px;
-}
-.section-title::before{
-  content:"";
-  position:absolute;
-  left:0; top:50%;
-  transform:translateY(-50%);
-  width:5px; height:22px;
-  background:linear-gradient(180deg, #c1131d 0%, #8a0a12 100%);
-  border-radius:1px;
 }
 .section-bar-line{
   flex:1;
-  height:2px;
-  background:linear-gradient(90deg, #c1131d 0%, #c1131d 80px, rgba(193,19,29,.4) 140px, #d4cfc2 220px, #d4cfc2 100%);
-}
-.section-tag{
-  font-family:'Hind Siliguri',sans-serif;
-  font-size:10px;
-  font-weight:700;
-  letter-spacing:.15em;
-  color:#fff;
-  background:#0a0a0a;
-  padding:4px 10px;
-  border-radius:2px;
-  white-space:nowrap;
+  height:3px;
+  background:linear-gradient(90deg, #c1131d 0%, #c1131d 100px, rgba(193,19,29,.4) 160px, #d4cfc2 240px, #d4cfc2 100%);
 }
 
 /* ===== HERO BLOCK (1 big + 1 tall) ===== */

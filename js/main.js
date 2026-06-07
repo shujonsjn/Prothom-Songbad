@@ -186,11 +186,7 @@
     return `
       <section class="hero-section">
       <div class="section-bar">
-        <span class="section-icon">◆</span>
-        <h2 class="section-title">${esc(sectionTitle)}</h2>
-        <span class="section-icon">◆</span>
         <div class="section-bar-line"></div>
-        <span class="section-tag">${esc(sectionTag)}</span>
       </div>
         <div class="hero-block">
           <div class="hero-left">${bigHtml}</div>
