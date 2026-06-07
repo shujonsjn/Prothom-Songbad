@@ -20,5 +20,5 @@
     <text x="30" y="13" font-size="11" fill="#ffffff">Prothom</text>
     <text x="64" y="13" font-size="11" fill="#ffffff" opacity="0.9">Songbad</text>
   </g>
-  <text x="30" y="22" font-family="'Inter','Helvetica',sans-serif" font-size="6" fill="#ffffff" opacity="0.8" letter-spacing="0.8">prothom-songbad.vercel.app</text>
+  <text x="30" y="22" font-family="'Inter','Helvetica',sans-serif" font-size="6" fill="#ffffff" opacity="0.8" letter-spacing="3">prothom-songbad.vercel.app</text>
 </svg>
