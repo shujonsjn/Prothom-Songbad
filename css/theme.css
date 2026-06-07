@@ -1833,8 +1833,15 @@ body.news-paper{ background:#ffffff; }
   right:6px;
 }
 #mediaSlot::after{
-  width:200px;
-  height:46px;
+  width:400px;
+  height:90px;
   bottom:4px;
   right:16px;
+  background-color:#c1131d;
+  background-image:url("/img/watermark.svg");
+  background-repeat:no-repeat;
+  background-position:center;
+  background-size:auto 80%;
+  border:2px solid #ffffff;
+  border-radius:0;
 }
