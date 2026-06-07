@@ -1833,8 +1833,8 @@ body.news-paper{ background:#ffffff; }
   right:6px;
 }
 #mediaSlot::after{
-  width:220px;
-  height:46px;
+  width:300px;
+  height:48px;
   bottom:1px;
-  right:20px;
+  right:22px;
 }
