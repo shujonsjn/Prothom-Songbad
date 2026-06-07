@@ -1034,9 +1034,8 @@ img{display:block;max-width:100%}
   transform:translateY(-2px);
 }
 .sidebar-banner img{
-  width:100%;
-  height:auto;
   display:block;
+  max-width:100%;
 }
 .sidebar-banner-label{
   position:absolute;
