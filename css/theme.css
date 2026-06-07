@@ -1231,8 +1231,11 @@ body.news-paper{ background:#ffffff; }
 .article-rail{
   background:#ffffff;
   border:none;
+  border-right:1px solid #d4cfc2;
   padding:48px 56px 56px;
   position:relative;
+  margin-right:-24px;
+  padding-right:72px;
 }
 
 /* back link */
@@ -1746,7 +1749,7 @@ body.news-paper{ background:#ffffff; }
 @media(max-width:1024px){
   .article{ grid-template-columns: 1fr; gap:32px; }
   .article-aside{ position:static; }
-  .article-rail{ padding:40px 40px 48px; }
+  .article-rail{ padding:40px 40px 48px; border-right:none; margin-right:0; padding-right:40px; }
   .article-title{ font-size:42px; }
 }
 @media(max-width:900px){
