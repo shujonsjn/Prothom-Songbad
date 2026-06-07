@@ -279,25 +279,13 @@
     /* Hero (first 3) + grid sections (Prothom Alo style) */
     const heroNews = data.slice(0, 3);
     const restNews = data.slice(3);
-    const latestNews = restNews.slice(0, 6);
-    const popularNews = restNews.slice(6, 12);
-    const moreNews = restNews.slice(12);
+    const latestNews = restNews;
 
     let html = renderHero(heroNews);
 
     if(latestNews.length){
       html += `<div class="section-heading"><span class="section-heading-label">সর্বশেষ</span><span class="section-heading-line"></span></div>`;
       html += `<div class="card-grid">${latestNews.map(renderCard).join("")}</div>`;
-    }
-
-    if(popularNews.length){
-      html += `<div class="section-heading"><span class="section-heading-label">জনপ্রিয়</span><span class="section-heading-line"></span></div>`;
-      html += `<div class="card-grid">${popularNews.map(renderCard).join("")}</div>`;
-    }
-
-    if(moreNews.length){
-      html += `<div class="section-heading"><span class="section-heading-label">আরও খবর</span><span class="section-heading-line"></span></div>`;
-      html += `<div class="card-grid">${moreNews.map(renderCard).join("")}</div>`;
     }
 
     mainNews.innerHTML = html;
