@@ -373,42 +373,6 @@ img{display:block;max-width:100%}
   background:linear-gradient(90deg, #d4cfc2 0%, #d4cfc2 100%);
 }
 
-/* ===== MID RED BANNER (between সর্বশেষ and জনপ্রিয়) ===== */
-.mid-red-banner{
-  margin:30px 0;
-  background:linear-gradient(135deg, #c1131d 0%, #8a0a12 100%);
-  padding:14px 24px;
-  position:relative;
-  overflow:hidden;
-}
-.mid-red-banner::before{
-  content:"";
-  position:absolute;
-  top:0; left:0; right:0; bottom:0;
-  background:repeating-linear-gradient(45deg, transparent, transparent 12px, rgba(255,255,255,.04) 12px, rgba(255,255,255,.04) 24px);
-  pointer-events:none;
-}
-.mid-red-banner-inner{
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  gap:14px;
-  position:relative;
-}
-.mid-red-banner-icon{
-  color:#fff;
-  font-size:8px;
-  opacity:.7;
-}
-.mid-red-banner-text{
-  font-family:'Hind Siliguri','Noto Serif Bengali',sans-serif;
-  font-size:15px;
-  font-weight:700;
-  color:#fff;
-  letter-spacing:.04em;
-  text-transform:uppercase;
-}
-
 /* ===== HERO BLOCK (1 big + 2 stacked medium) ===== */
 .hero-block{
   display:grid;

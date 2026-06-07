@@ -290,17 +290,6 @@
       html += `<div class="card-grid">${latestNews.map(renderCard).join("")}</div>`;
     }
 
-    /* Red accent banner between sections */
-    if(latestNews.length && popularNews.length){
-      html += `<div class="mid-red-banner">
-        <div class="mid-red-banner-inner">
-          <span class="mid-red-banner-icon">●</span>
-          <span class="mid-red-banner-text">সর্বশেষ আপডেট পেতে আমাদের সাথে থাকুন</span>
-          <span class="mid-red-banner-icon">●</span>
-        </div>
-      </div>`;
-    }
-
     if(popularNews.length){
       html += `<div class="section-heading"><span class="section-heading-label">জনপ্রিয়</span><span class="section-heading-line"></span></div>`;
       html += `<div class="card-grid">${popularNews.map(renderCard).join("")}</div>`;
