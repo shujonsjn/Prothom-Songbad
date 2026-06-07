@@ -1833,7 +1833,7 @@ body.news-paper{ background:#ffffff; }
   right:6px;
 }
 #mediaSlot::after{
-  width:800px;
+  width:200px;
   height:46px;
   bottom:4px;
   right:16px;
