@@ -1,15 +1,14 @@
 // api/cron-update.mjs — Vercel / External Cron Job
-// প্রতি ১০ মিনিটে Prothom Alo এর "খেলা" পেজ scrape করে
-// ৫টি নতুন খবর summarize করে Turso DB-তে যোগ করে।
+// প্রতি ১০ মিনিটে Prothom Alo এর মূল RSS feed থেকে সব category-র খবর scrape করে
+// প্রতি category থেকে ২-৩টি নতুন খবর summarize করে Turso DB-তে যোগ করে।
 // Schedule: */10 * * * * (GitHub Actions) বা cron-job.org
 // Auth: ?secret=CRON_SECRET  বা  Authorization: Bearer CRON_SECRET
 
 import { createClient } from "@libsql/client";
 
 const FEED_URL    = "https://www.prothomalo.com/feed/";
-const CATEGORY    = "খেলা";
-const LIMIT       = 5;
 const MAX_SUMMARY_CHARS = 420;
+const PER_CATEGORY_LIMIT = 2;
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
 /* ===== Turso / DB ===== */
@@ -124,8 +123,25 @@ function toEmbedUrl(url) {
   return url;
 }
 
-/* Prothom Alo URL → Bengali subcategory */
-const SLUG_TO_BN = {
+/* ===== Prothom Alo URL → Bengali category + subcategory ===== */
+const SLUG_TO_CAT = [
+  { slug: "sports",        cat: "খেলা" },
+  { slug: "bangladesh",    cat: "জাতীয়" },
+  { slug: "international", cat: "আন্তর্জাতিক" },
+  { slug: "politics",      cat: "রাজনীতি" },
+  { slug: "world",         cat: "বিশ্ব" },
+  { slug: "business",      cat: "বাণিজ্য" },
+  { slug: "opinion",       cat: "মতামত" },
+  { slug: "entertainment", cat: "বিনোদন" },
+  { slug: "tech",          cat: "প্রযুক্তি" },
+  { slug: "jobs",          cat: "চাকরি" },
+  { slug: "lifestyle",     cat: "জীবনযাপন" },
+  { slug: "video",         cat: "ভিডিও" },
+  { slug: "chakri",        cat: "চাকরি" }
+];
+
+const SLUG_TO_SUBCAT = {
+  /* খেলা */
   cricket:    "ক্রিকেট",
   football:   "ফুটবল",
   tennis:     "টেনিস",
@@ -138,19 +154,76 @@ const SLUG_TO_BN = {
   athletics:  "অ্যাথলেটিক্স",
   swimming:   "সাঁতার",
   boxing:     "বক্সিং",
-  esports:    "ই-স্পোর্টস"
+  esports:    "ই-স্পোর্টস",
+  /* জাতীয় */
+  politics:   "রাজনীতি",
+  government: "সরকার",
+  law:        "আইন",
+  education:  "শিক্ষা",
+  health:     "স্বাস্থ্য",
+  crime:      "অপরাধ",
+  /* আন্তর্জাতিক */
+  asia:       "এশিয়া",
+  europe:     "ইউরোপ",
+  america:    "আমেরিকা",
+  middleeast: "মধ্যপ্রাচ্য",
+  /* বাণিজ্য */
+  stock:      "শেয়ারবাজার",
+  bank:       "ব্যাংক",
+  economy:    "অর্থনীতি",
+  trade:      "বাণিজ্য",
+  /* প্রযুক্তি */
+  mobile:     "মোবাইল",
+  gadget:     "গ্যাজেট",
+  software:   "সফটওয়্যার",
+  ai:         "এআই",
+  startup:    "স্টার্টআপ",
+  /* বিনোদন */
+  bollywood:  "বলিউড",
+  tollywood:  "টলিউড",
+  dhallywood: "ধলিউড",
+  music:      "সংগীত",
+  film:       "চলচ্চিত্র",
+  drama:      "নাটক",
+  /* জীবনযাপন */
+  food:       "খাবার",
+  travel:     "ভ্রমণ",
+  fashion:    "ফ্যাশন",
+  health_tip: "স্বাস্থ্য",
+  relationship: "সম্পর্ক",
+  /* চাকরি */
+  govt_job:   "সরকারি চাকরি",
+  private_job:"বেসরকারি চাকরি",
+  bank_job:   "ব্যাংক চাকরি",
+  result:     "ফলাফল",
+  admit:      "ভর্তি"
 };
+
+function pickCategoryFromUrl(url) {
+  if (!url) return null;
+  try {
+    const u = new URL(url);
+    const parts = u.pathname.split("/").filter(Boolean);
+    for (const m of SLUG_TO_CAT) {
+      if (parts.includes(m.slug)) return m.cat;
+    }
+    return null;
+  } catch { return null; }
+}
+
 function pickSubcategoryFromUrl(url) {
   if (!url) return null;
   try {
     const u = new URL(url);
     const parts = u.pathname.split("/").filter(Boolean);
-    const sportsIdx = parts.indexOf("sports");
-    if (sportsIdx >= 0) {
-      const next = parts[sportsIdx + 1];
-      if (next && SLUG_TO_BN[next]) return SLUG_TO_BN[next];
+    for (const m of SLUG_TO_CAT) {
+      const idx = parts.indexOf(m.slug);
+      if (idx >= 0) {
+        const next = parts[idx + 1];
+        if (next && SLUG_TO_SUBCAT[next]) return SLUG_TO_SUBCAT[next];
+        if (m.slug === "video") return "ভিডিও";
+      }
     }
-    if (parts[0] === "video" && parts.includes("sports")) return "ভিডিও";
     return null;
   } catch { return null; }
 }
@@ -193,23 +266,28 @@ async function fetchFeed() {
   return await res.text();
 }
 
-function extractSportsItems(xml) {
+/* প্রতি category-র জন্য সর্বশেষ PER_CATEGORY_LIMIT সংখ্যক item */
+function groupItemsByCategory(xml) {
   const items = pickAllItems(xml);
-  const out = [];
+  const grouped = {};
   for (const block of items) {
     const link = pickTag(block, "link");
-    if (!link || !/\/sports\//.test(link)) continue;
-    out.push({
+    if (!link) continue;
+    const cat = pickCategoryFromUrl(link);
+    if (!cat) continue;
+    if (!grouped[cat]) grouped[cat] = [];
+    if (grouped[cat].length >= PER_CATEGORY_LIMIT) continue;
+    grouped[cat].push({
       title:    pickTag(block, "title") || "",
       link,
       pubDate:  pickTag(block, "pubDate") || "",
       image:    pickAttr(block, "media:content", "url")
               || pickAttr(block, "media:thumbnail", "url")
-              || null
+              || null,
+      category: cat
     });
-    if (out.length >= LIMIT) break;
   }
-  return out;
+  return grouped;
 }
 
 /* ===== Summarize: take first ~420 chars at sentence boundary ===== */
@@ -217,7 +295,6 @@ function summarize(text, max = MAX_SUMMARY_CHARS) {
   if (!text) return null;
   const clean = text.replace(/\s+/g, " ").trim();
   if (clean.length <= max) return clean;
-  /* cut at max, then back up to nearest sentence end */
   const cut = clean.slice(0, max);
   const lastStop = Math.max(
     cut.lastIndexOf("। "),
@@ -227,7 +304,6 @@ function summarize(text, max = MAX_SUMMARY_CHARS) {
     cut.lastIndexOf("? ")
   );
   if (lastStop > 100) return clean.slice(0, lastStop + 1).trim();
-  /* fallback: back up to last space */
   const lastSpace = cut.lastIndexOf(" ");
   return clean.slice(0, lastSpace > 100 ? lastSpace : max).trim() + "…";
 }
@@ -251,17 +327,18 @@ async function fetchArticle(url) {
       image,
       summary: summarize(body) || pickMeta(html, "og:description"),
       video,
+      category:    pickCategoryFromUrl(url),
       subcategory: pickSubcategoryFromUrl(url),
       link: url
     };
   } catch { return null; }
 }
 
-async function insertNews({ title, image, details, video, subcategory }) {
+async function insertNews({ title, category, image, details, video, subcategory }) {
   const time = new Date().toLocaleString("en-US", { timeZone: "Asia/Dhaka" });
   const r = await run(
     "INSERT INTO news (title, category, subcategory, details, image, video, time) VALUES (?, ?, ?, ?, ?, ?, ?)",
-    title, CATEGORY, subcategory || null, details, image || null, video || null, time
+    title, category, subcategory || null, details, image || null, video || null, time
   );
   return r.lastInsertRowid;
 }
@@ -278,17 +355,23 @@ export default async function handler(req, res) {
   }
 
   try {
-    /* 1. RSS feed → sports article URLs + titles */
+    /* 1. মূল RSS feed থেকে সব category-র article URLs */
     const xml = await fetchFeed();
-    const items = extractSportsItems(xml);
-    if (items.length === 0) {
-      return res.status(200).json({ ok: true, added: 0, message: "No sports items in feed" });
+    const grouped = groupItemsByCategory(xml);
+
+    const totalFetched = Object.values(grouped).reduce((n, arr) => n + arr.length, 0);
+    if (totalFetched === 0) {
+      return res.status(200).json({ ok: true, added: 0, message: "No items in feed" });
     }
 
-    /* 2. Fetch each article in parallel (4 at a time) */
+    /* 2. Flatten + fetch all article pages in parallel (4 at a time) */
+    const flat = [];
+    for (const cat of Object.keys(grouped)) {
+      for (const it of grouped[cat]) flat.push(it);
+    }
     const articles = [];
-    for (let i = 0; i < items.length; i += 4) {
-      const batch = await Promise.all(items.slice(i, i + 4).map(it => fetchArticle(it.link)));
+    for (let i = 0; i < flat.length; i += 4) {
+      const batch = await Promise.all(flat.slice(i, i + 4).map(it => fetchArticle(it.link)));
       for (const a of batch) if (a) articles.push(a);
     }
     if (articles.length === 0) {
@@ -298,7 +381,9 @@ export default async function handler(req, res) {
     /* 3. Insert or self-heal each */
     const added = [];
     const skipped = [];
+    const byCategory = {};
     for (const it of articles) {
+      const cat = it.category || "সর্বশেষ";
       const details = it.summary
         ? `${it.summary}\n\n— সারসংক্ষেপ: Prothom Alo (${it.link})`
         : `Prothom Alo থেকে সংগৃহীত।\nসূত্র: ${it.link}`;
@@ -321,7 +406,7 @@ export default async function handler(req, res) {
             "UPDATE news SET details = ?, video = ?, subcategory = ? WHERE id = ?",
             newDetails, newVideo, newSub, existing.id
           );
-          added.push({ id: existing.id, title: it.title, action: "updated" });
+          added.push({ id: existing.id, title: it.title, category: cat, action: "updated" });
         } else {
           skipped.push({ id: existing.id, title: it.title, reason: "duplicate" });
         }
@@ -330,16 +415,18 @@ export default async function handler(req, res) {
       try {
         const id = await insertNews({
           title:       it.title,
+          category:    cat,
           image:       it.image,
           details:     details.slice(0, 2000),
           video:       it.video,
           subcategory: it.subcategory
         });
         added.push({
-          id, title: it.title,
+          id, title: it.title, category: cat,
           summaryLen: it.summary ? it.summary.length : 0,
           video: !!it.video, sub: it.subcategory || null
         });
+        byCategory[cat] = (byCategory[cat] || 0) + 1;
       } catch (err) {
         skipped.push({ title: it.title, reason: err.message });
       }
@@ -347,12 +434,12 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       ok: true,
-      source: "Prothom Alo RSS (sports, summarized to 420 chars)",
-      category: CATEGORY,
-      fetched: items.length,
+      source: "Prothom Alo RSS (all categories, summarized to 420 chars)",
+      fetched: totalFetched,
       parsed: articles.length,
       added: added.length,
       skipped: skipped.length,
+      byCategory,
       addedItems: added,
       skippedItems: skipped
     });
