@@ -1230,24 +1230,10 @@ body.news-paper{ background:#ffffff; }
 /* ===== main article column ===== */
 .article-rail{
   background:#ffffff;
-  border:1px solid #0a0a0a;
-  border-top:6px double #0a0a0a;
-  border-bottom:6px double #0a0a0a;
+  border:none;
   padding:48px 56px 56px;
   position:relative;
-  box-shadow:0 1px 4px rgba(0,0,0,.04);
 }
-
-.article-rail::before,
-.article-rail::after{
-  content:"";
-  position:absolute;
-  left:0; right:0;
-  height:1px;
-  background:#0a0a0a;
-}
-.article-rail::before{ top:14px; }
-.article-rail::after { bottom:14px; }
 
 /* back link */
 .back{
@@ -1547,10 +1533,9 @@ body.news-paper{ background:#ffffff; }
 }
 .aside-card{
   background:#ffffff;
-  border:1px solid #0a0a0a;
+  border:none;
   padding:22px 22px 26px;
   position:relative;
-  box-shadow:0 1px 3px rgba(0,0,0,.04);
 }
 .aside-title{
   font-family:'Hind Siliguri',sans-serif;
