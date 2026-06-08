@@ -472,11 +472,16 @@
       overlay.className = "map-overlay-labels";
       overlay.style.cssText = "position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:hidden;";
       wrap.appendChild(overlay);
+      let vx = 0, vy = 0, vw, vh;
       const vBox = svg.getAttribute("viewBox");
-      if(!vBox) return;
-      const parts = vBox.split(/\s+/).map(Number);
-      if(parts.length < 4) return;
-      const [vx, vy, vw, vh] = parts;
+      if(vBox){
+        const parts = vBox.split(/\s+/).map(Number);
+        if(parts.length >= 4) { vx = parts[0]; vy = parts[1]; vw = parts[2]; vh = parts[3]; }
+      }
+      if(vw == null){
+        vw = svg.clientWidth || svg.getAttribute("width") || 800;
+        vh = svg.clientHeight || svg.getAttribute("height") || 600;
+      }
       const rw = wrap.clientWidth, rh = wrap.clientHeight;
       dataItems.forEach(d => {
         const code = d.country.toUpperCase();
