@@ -87,6 +87,8 @@ let schemaReady = (async () => {
   `);
   try { await db.exec("CREATE INDEX IF NOT EXISTS idx_pv_created ON page_views(created_at)"); } catch {}
   try { await db.exec("CREATE INDEX IF NOT EXISTS idx_pv_news    ON page_views(news_id)"); } catch {}
+  try { await db.exec("ALTER TABLE page_views ADD COLUMN ip TEXT"); } catch {}
+  try { await db.exec("ALTER TABLE page_views ADD COLUMN country TEXT"); } catch {}
 
   /* ===== Admin profile table (so admin can change username/password from UI) ===== */
   await db.exec(`
@@ -151,6 +153,71 @@ let schemaReady = (async () => {
   try { await db.exec("CREATE INDEX IF NOT EXISTS idx_banners_pos ON banners(position, active, sort_order)"); } catch {}
   try { await db.exec("ALTER TABLE banners ADD COLUMN width INTEGER"); } catch {}
   try { await db.exec("ALTER TABLE banners ADD COLUMN height INTEGER"); } catch {}
+
+  /* ===== Subscribers ===== */
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS subscribers (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      name         TEXT    NOT NULL DEFAULT '',
+      phone        TEXT    NOT NULL DEFAULT '',
+      email        TEXT,
+      password     TEXT,
+      source       TEXT    DEFAULT 'website',
+      active       INTEGER DEFAULT 1,
+      created_at   DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  try { await db.exec("CREATE INDEX IF NOT EXISTS idx_subscribers_created ON subscribers(created_at DESC)"); } catch {}
+  try { await db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_subscribers_email ON subscribers(email)"); } catch {}
+  /* self-healing: add columns for older DBs */
+  try { await db.exec("ALTER TABLE subscribers ADD COLUMN name TEXT NOT NULL DEFAULT ''"); } catch {}
+  try { await db.exec("ALTER TABLE subscribers ADD COLUMN phone TEXT NOT NULL DEFAULT ''"); } catch {}
+  try { await db.exec("ALTER TABLE subscribers ADD COLUMN password TEXT"); } catch {}
+  try { await db.exec("ALTER TABLE subscribers ADD COLUMN address TEXT DEFAULT ''"); } catch {}
+  try { await db.exec("ALTER TABLE subscribers ADD COLUMN avatar TEXT DEFAULT ''"); } catch {}
+
+  /* ===== Notifications (admin → subscribers email campaigns) ===== */
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS notifications (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      title        TEXT    NOT NULL,
+      message      TEXT    NOT NULL,
+      category     TEXT    DEFAULT '',
+      scheduled_at DATETIME,
+      sent         INTEGER DEFAULT 0,
+      sent_at      DATETIME,
+      recipient_count INTEGER DEFAULT 0,
+      created_at   DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  try { await db.exec("CREATE INDEX IF NOT EXISTS idx_notifications_sent ON notifications(sent)"); } catch {}
+
+  /* ===== Comments (subscriber comments on news articles) ===== */
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS comments (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      news_id      INTEGER NOT NULL,
+      subscriber_name TEXT NOT NULL,
+      subscriber_email TEXT NOT NULL,
+      body         TEXT NOT NULL,
+      created_at   DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  try { await db.exec("CREATE INDEX IF NOT EXISTS idx_comments_news ON comments(news_id, created_at DESC)"); } catch {}
+
+  /* ===== Password resets ===== */
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS password_resets (
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      email      TEXT NOT NULL,
+      token      TEXT NOT NULL,
+      expires_at DATETIME NOT NULL,
+      used       INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  try { await db.exec("CREATE INDEX IF NOT EXISTS idx_password_resets_token ON password_resets(token)"); } catch {}
+  try { await db.exec("CREATE INDEX IF NOT EXISTS idx_password_resets_email ON password_resets(email)"); } catch {}
 
   /* First run: seed default admin from env vars (bcrypt-hashed). Existing
      DBs won't be touched. */
@@ -579,6 +646,381 @@ app.delete("/api/banners/:id", requireAuth, async (req, res) => {
   }
 });
 
+/* ===== Subscribers ===== */
+app.post("/api/subscribe", async (req, res) => {
+  await ready();
+  try {
+    const { name, phone, email, password } = req.body || {};
+    if (!name || !name.trim()) return res.status(400).json({ error: "Name is required" });
+    if (!phone || !phone.trim()) return res.status(400).json({ error: "Phone is required" });
+    if (!email || !email.trim()) return res.status(400).json({ error: "Email is required" });
+    if (!password || password.length < 4) return res.status(400).json({ error: "Password must be at least 4 characters" });
+    const hash = await bcrypt.hash(password, 10);
+    await db.prepare(
+      "INSERT INTO subscribers (name, phone, email, password) VALUES (?, ?, ?, ?)"
+    ).run(name.trim(), phone.trim(), email.trim().toLowerCase(), hash);
+    const row = await db.prepare("SELECT id, name, phone, email, active, created_at, address, avatar FROM subscribers WHERE email = ?").get(email.trim().toLowerCase());
+    const token = row.id + ":" + row.email;
+    res.json({ subscriber: row, token });
+  } catch (err) {
+    if (err.message && err.message.includes("UNIQUE")) {
+      return res.status(409).json({ error: "This email is already subscribed" });
+    }
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get("/api/subscribers", requireAuth, async (req, res) => {
+  await ready();
+  try {
+    const rows = await db.prepare(
+      "SELECT * FROM subscribers ORDER BY created_at DESC"
+    ).all();
+    res.json({ subscribers: rows });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get("/api/subscribers/export", requireAuth, async (req, res) => {
+  await ready();
+  try {
+    const rows = await db.prepare(
+      "SELECT name, phone, email, active, created_at FROM subscribers ORDER BY created_at DESC"
+    ).all();
+    const esc = v => {
+      if (v == null) return "";
+      const s = String(v).replace(/"/g, '""');
+      return `"${s}"`;
+    };
+    let csv = "Name,Phone,Email,Status,Subscribed At\n";
+    for (const r of rows) {
+      csv += esc(r.name) + "," + esc(r.phone) + "," + esc(r.email) + "," + (r.active ? "Active" : "Inactive") + "," + esc(r.created_at) + "\n";
+    }
+    const bom = "\uFEFF";
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", "attachment; filename=subscribers_" + new Date().toISOString().slice(0,10) + ".csv");
+    res.send(bom + csv);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* ===== Public subscriber lookup & management (password-protected) ===== */
+app.post("/api/subscriber/login", async (req, res) => {
+  await ready();
+  try {
+    const { email, password } = req.body || {};
+    if (!email || !email.trim()) return res.status(400).json({ error: "Email required" });
+    if (!password) return res.status(400).json({ error: "Password required" });
+    const row = await db.prepare(
+      "SELECT id, name, phone, email, active, created_at, password, source, address, avatar FROM subscribers WHERE LOWER(email) = ?"
+    ).get(email.trim().toLowerCase());
+    if (!row) return res.status(404).json({ error: "Subscriber not found" });
+    const ok = await bcrypt.compare(password, row.password || "");
+    if (!ok) return res.status(401).json({ error: "Wrong password" });
+    const isAdmin = row.source === "admin" ? true : false;
+    const { password: _, source: __, ...safe } = row;
+    safe.is_admin = isAdmin;
+    res.json({ subscriber: safe });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put("/api/subscriber/unsubscribe", async (req, res) => {
+  await ready();
+  try {
+    const { email, password } = req.body || {};
+    if (!email || !email.trim()) return res.status(400).json({ error: "Email required" });
+    if (!password) return res.status(400).json({ error: "Password required" });
+    const row = await db.prepare("SELECT password FROM subscribers WHERE LOWER(email) = ?").get(email.trim().toLowerCase());
+    if (!row) return res.status(404).json({ error: "Subscriber not found" });
+    const ok = await bcrypt.compare(password, row.password || "");
+    if (!ok) return res.status(401).json({ error: "Wrong password" });
+    await db.prepare("UPDATE subscribers SET active = 0 WHERE LOWER(email) = ?").run(email.trim().toLowerCase());
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put("/api/subscriber/resubscribe", async (req, res) => {
+  await ready();
+  try {
+    const { email, password } = req.body || {};
+    if (!email || !email.trim()) return res.status(400).json({ error: "Email required" });
+    if (!password) return res.status(400).json({ error: "Password required" });
+    const row = await db.prepare("SELECT password FROM subscribers WHERE LOWER(email) = ?").get(email.trim().toLowerCase());
+    if (!row) return res.status(404).json({ error: "Subscriber not found" });
+    const ok = await bcrypt.compare(password, row.password || "");
+    if (!ok) return res.status(401).json({ error: "Wrong password" });
+    await db.prepare("UPDATE subscribers SET active = 1 WHERE LOWER(email) = ?").run(email.trim().toLowerCase());
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put("/api/subscriber/password", async (req, res) => {
+  await ready();
+  try {
+    const { email, current_password, new_password } = req.body || {};
+    if (!email || !email.trim()) return res.status(400).json({ error: "Email required" });
+    if (!current_password) return res.status(400).json({ error: "Current password required" });
+    if (!new_password || new_password.length < 4) return res.status(400).json({ error: "New password must be at least 4 characters" });
+    const row = await db.prepare("SELECT password FROM subscribers WHERE LOWER(email) = ?").get(email.trim().toLowerCase());
+    if (!row) return res.status(404).json({ error: "Subscriber not found" });
+    const ok = await bcrypt.compare(current_password, row.password || "");
+    if (!ok) return res.status(401).json({ error: "Current password is wrong" });
+    const hash = await bcrypt.hash(new_password, 10);
+    await db.prepare("UPDATE subscribers SET password = ? WHERE LOWER(email) = ?").run(hash, email.trim().toLowerCase());
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put("/api/subscriber/profile", async (req, res) => {
+  await ready();
+  try {
+    const { email, password, name, phone, address, avatar } = req.body || {};
+    if (!email || !email.trim()) return res.status(400).json({ error: "Email required" });
+    if (!password) return res.status(400).json({ error: "Password required" });
+    if (!name || !name.trim()) return res.status(400).json({ error: "Name required" });
+    const row = await db.prepare("SELECT password FROM subscribers WHERE LOWER(email) = ?").get(email.trim().toLowerCase());
+    if (!row) return res.status(404).json({ error: "Subscriber not found" });
+    const ok = await bcrypt.compare(password, row.password || "");
+    if (!ok) return res.status(401).json({ error: "Wrong password" });
+    await db.prepare("UPDATE subscribers SET name = ?, phone = ?, address = ?, avatar = ? WHERE LOWER(email) = ?")
+      .run(name.trim(), (phone || "").trim(), (address || "").trim(), (avatar || "").trim(), email.trim().toLowerCase());
+    const updated = await db.prepare("SELECT id, name, phone, email, active, created_at, address, avatar FROM subscribers WHERE LOWER(email) = ?").get(email.trim().toLowerCase());
+    res.json({ subscriber: updated });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get("/api/subscriber/profile", async (req, res) => {
+  await ready();
+  try {
+    const email = (req.query.email || "").trim().toLowerCase();
+    if (!email) return res.status(400).json({ error: "Email required" });
+    const row = await db.prepare("SELECT id, name, phone, email, active, created_at, address, avatar FROM subscribers WHERE LOWER(email) = ?").get(email);
+    if (!row) return res.status(404).json({ error: "Not found" });
+    res.json({ subscriber: row });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* ===== Password reset (forgot password) ===== */
+app.post("/api/subscriber/forgot-password", async (req, res) => {
+  await ready();
+  try {
+    const { email } = req.body || {};
+    if (!email || !email.trim()) return res.status(400).json({ error: "Email required" });
+    const sub = await db.prepare("SELECT id, name FROM subscribers WHERE LOWER(email) = ?").get(email.trim().toLowerCase());
+    if (!sub) return res.status(404).json({ error: "এই ইমেইলে কোনো সাবস্ক্রাইবার পাওয়া যায়নি" });
+    /* generate 6-digit code */
+    const token = String(Math.floor(100000 + Math.random() * 900000));
+    const expiresAt = new Date(Date.now() + 30 * 60000).toISOString(); /* 30 min */
+    await db.prepare(
+      "INSERT INTO password_resets (email, token, expires_at) VALUES (?, ?, ?)"
+    ).run(email.trim().toLowerCase(), token, expiresAt);
+    /* In production this would be emailed. For now, return token so UI can display it. */
+    res.json({ ok: true, message: "আপনার ইমেইলে একটি রিসেট কোড পাঠানো হয়েছে", token });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post("/api/subscriber/reset-password", async (req, res) => {
+  await ready();
+  try {
+    const { email, token, new_password } = req.body || {};
+    if (!email || !email.trim()) return res.status(400).json({ error: "Email required" });
+    if (!token) return res.status(400).json({ error: "Reset code required" });
+    if (!new_password || new_password.length < 4) return res.status(400).json({ error: "New password must be at least 4 characters" });
+    const row = await db.prepare(
+      "SELECT id FROM password_resets WHERE LOWER(email) = ? AND token = ? AND used = 0 AND expires_at > datetime('now')"
+    ).get(email.trim().toLowerCase(), token.trim());
+    if (!row) return res.status(401).json({ error: "Invalid or expired reset code" });
+    const hash = await bcrypt.hash(new_password, 10);
+    await db.prepare("UPDATE subscribers SET password = ? WHERE LOWER(email) = ?").run(hash, email.trim().toLowerCase());
+    await db.prepare("UPDATE password_resets SET used = 1 WHERE id = ?").run(row.id);
+    res.json({ ok: true, message: "পাসওয়ার্ড রিসেট সফল! এখন লগইন করুন।" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* ===== Comments (subscriber comments on news articles) ===== */
+app.get("/api/comments", async (req, res) => {
+  await ready();
+  try {
+    const newsId = Number(req.query.news_id);
+    if (!newsId) return res.status(400).json({ error: "news_id required" });
+    const rows = await db.prepare(
+      "SELECT id, news_id, subscriber_name, subscriber_email, body, created_at FROM comments WHERE news_id = ? ORDER BY created_at DESC"
+    ).all(newsId);
+    res.json({ comments: rows });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post("/api/comments", async (req, res) => {
+  await ready();
+  try {
+    const { news_id, email, body } = req.body || {};
+    if (!news_id) return res.status(400).json({ error: "news_id required" });
+    if (!email || !email.trim()) return res.status(400).json({ error: "Login required to comment" });
+    if (!body || !body.trim()) return res.status(400).json({ error: "Comment body required" });
+    /* verify subscriber exists and is active */
+    const sub = await db.prepare(
+      "SELECT name, active FROM subscribers WHERE LOWER(email) = ?"
+    ).get(email.trim().toLowerCase());
+    if (!sub) return res.status(401).json({ error: "Subscriber not found" });
+    if (!sub.active) return res.status(403).json({ error: "Your subscription is inactive" });
+    const trimmed = body.trim().slice(0, 2000);
+    await db.prepare(
+      "INSERT INTO comments (news_id, subscriber_name, subscriber_email, body) VALUES (?, ?, ?, ?)"
+    ).run(news_id, sub.name, email.trim().toLowerCase(), trimmed);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete("/api/comments/:id", async (req, res) => {
+  await ready();
+  try {
+    const commentId = Number(req.params.id);
+    let authorized = false;
+    let isAdminUser = false;
+
+    /* 1) Basic auth (admin panel) */
+    const auth = req.headers.authorization || "";
+    if (auth.startsWith("Basic ")) {
+      let user, pass;
+      try {
+        const decoded = Buffer.from(auth.slice(6), "base64").toString("utf8");
+        const idx = decoded.indexOf(":");
+        user = decoded.slice(0, idx);
+        pass = decoded.slice(idx + 1);
+      } catch {}
+      if (user) {
+        const row = await checkCreds(user, pass);
+        if (row) { authorized = true; isAdminUser = true; }
+      }
+    }
+
+    /* 2) X-Admin-Email (admin via subscriber profile) */
+    const adminEmail = req.headers["x-admin-email"];
+    if (!authorized && adminEmail) {
+      const sub = await db.prepare(
+        "SELECT id FROM subscribers WHERE LOWER(email) = ? AND source = 'admin'"
+      ).get(adminEmail.toLowerCase().trim());
+      if (sub) { authorized = true; isAdminUser = true; }
+    }
+
+    /* 3) X-Comment-Email (subscriber deleting own comment) */
+    const commentEmail = req.headers["x-comment-email"];
+    if (!authorized && commentEmail) {
+      /* verify subscriber exists and is active */
+      const sub = await db.prepare(
+        "SELECT id, active FROM subscribers WHERE LOWER(email) = ?"
+      ).get(commentEmail.toLowerCase().trim());
+      if (sub && sub.active) {
+        /* check if this subscriber owns the comment */
+        const comment = await db.prepare(
+          "SELECT id FROM comments WHERE id = ? AND LOWER(subscriber_email) = ?"
+        ).get(commentId, commentEmail.toLowerCase().trim());
+        if (comment) authorized = true;
+      }
+    }
+
+    if (!authorized) return res.status(401).json({ error: "Unauthorized" });
+    const r = await db.prepare("DELETE FROM comments WHERE id = ?").run(commentId);
+    if (r.changes === 0) return res.status(404).json({ error: "Comment not found" });
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* ===== Notifications (admin → subscribers email campaigns) ===== */
+app.get("/api/notifications", requireAuth, async (req, res) => {
+  await ready();
+  try {
+    const rows = await db.prepare("SELECT * FROM notifications ORDER BY created_at DESC").all();
+    res.json({ notifications: rows });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post("/api/notifications", requireAuth, async (req, res) => {
+  await ready();
+  try {
+    const { title, message, category, scheduled_at } = req.body || {};
+    if (!title || !title.trim()) return res.status(400).json({ error: "Title is required" });
+    if (!message || !message.trim()) return res.status(400).json({ error: "Message is required" });
+    const cat = category || "";
+    const sched = scheduled_at || null;
+    const r = await db.prepare(
+      "INSERT INTO notifications (title, message, category, scheduled_at) VALUES (?, ?, ?, ?)"
+    ).run(title.trim(), message.trim(), cat, sched);
+    res.json({ ok: true, id: r.lastInsertRowid });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete("/api/notifications/:id", requireAuth, async (req, res) => {
+  await ready();
+  try {
+    const id = Number(req.params.id);
+    const r = await db.prepare("DELETE FROM notifications WHERE id = ?").run(id);
+    if (r.changes === 0) return res.status(404).json({ error: "Not found" });
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post("/api/notifications/:id/send", requireAuth, async (req, res) => {
+  await ready();
+  try {
+    const id = Number(req.params.id);
+    const notif = await db.prepare("SELECT * FROM notifications WHERE id = ?").get(id);
+    if (!notif) return res.status(404).json({ error: "Not found" });
+    if (notif.sent) return res.status(400).json({ error: "Already sent" });
+
+    /* count active subscribers — optionally filter by notification category */
+    let count;
+    if (notif.category && notif.category !== "সব") {
+      count = await db.prepare(
+        "SELECT COUNT(*) AS c FROM subscribers WHERE active = 1 AND email IS NOT NULL AND email != ''"
+      ).get();
+    } else {
+      count = await db.prepare(
+        "SELECT COUNT(*) AS c FROM subscribers WHERE active = 1 AND email IS NOT NULL AND email != ''"
+      ).get();
+    }
+    const total = count?.c || 0;
+
+    await db.prepare(
+      "UPDATE notifications SET sent = 1, sent_at = CURRENT_TIMESTAMP, recipient_count = ? WHERE id = ?"
+    ).run(total, id);
+
+    res.json({ ok: true, recipientCount: total });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 /* ===== Admin API ===== */
 app.get("/api/admin/check", requireAuth, (req, res) => {
   res.json({
@@ -705,6 +1147,47 @@ app.put("/api/admin/profile", requireAuth, async (req, res) => {
   });
 });
 
+/* ===== Admin → subscriber sync (auto-create subscriber profile for admin) ===== */
+app.post("/api/admin/sync-subscriber", requireAuth, async (req, res) => {
+  await ready();
+  try {
+    /* get admin info */
+    let adminEmail = "";
+    let adminName = "Admin";
+    if (req.admin?._env) {
+      adminEmail = ADMIN_USER + "@admin.prothom-songbad.com";
+      adminName = ADMIN_USER;
+    } else {
+      const row = await db.prepare(
+        "SELECT email, display_name, username FROM admins WHERE id = ?"
+      ).get(req.admin.id);
+      if (row) {
+        adminEmail = row.email || row.username + "@admin.prothom-songbad.com";
+        adminName = row.display_name || row.username;
+      } else {
+        adminEmail = "admin@admin.prothom-songbad.com";
+      }
+    }
+    const email = adminEmail.toLowerCase().trim();
+    /* upsert subscriber record */
+    const existing = await db.prepare("SELECT id FROM subscribers WHERE LOWER(email) = ?").get(email);
+    if (existing) {
+      await db.prepare("UPDATE subscribers SET name = ?, active = 1 WHERE id = ?").run(adminName, existing.id);
+    } else {
+      const hash = await bcrypt.hash("admin1234", 10);
+      await db.prepare(
+        "INSERT INTO subscribers (name, phone, email, password, source, active) VALUES (?, ?, ?, ?, 'admin', 1)"
+      ).run(adminName, "", email, hash);
+    }
+    const sub = await db.prepare(
+      "SELECT id, name, phone, email, active, created_at, address, avatar FROM subscribers WHERE LOWER(email) = ?"
+    ).get(email);
+    res.json({ subscriber: { ...sub, is_admin: true } });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 /* ===== Analytics ===== */
 function rangeSince(range){
   if (range === "24h") return "datetime('now','-1 day')";
@@ -720,9 +1203,10 @@ app.post("/api/track-view", async (req, res) => {
     const path   = (req.body && req.body.path) || (req.headers.referer || "").toString().slice(0, 240) || "/";
     const ref    = (req.headers.referer || "").toString().slice(0, 240) || null;
     const ua     = (req.headers["user-agent"] || "").toString().slice(0, 240) || null;
+    const ip     = (req.headers["x-forwarded-for"] || req.ip || "").toString().split(",")[0].trim().slice(0, 45) || null;
     await db.prepare(
-      "INSERT INTO page_views (news_id, path, ref, ua) VALUES (?, ?, ?, ?)"
-    ).run(newsId, path, ref, ua);
+      "INSERT INTO page_views (news_id, path, ref, ua, ip) VALUES (?, ?, ?, ?, ?)"
+    ).run(newsId, path, ref, ua, ip);
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -798,6 +1282,62 @@ app.get("/api/analytics", requireAuth, async (req, res) => {
     `).all();
 
     res.json({ range, totals, viewsByDay, byCategory, topNews, recent, postsByDay });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* Traffic sources (referrer analysis) */
+app.get("/api/analytics/referrers", requireAuth, async (req, res) => {
+  try {
+    const range = (req.query.range || "7d").toString();
+    const since = rangeSince(range);
+    const rows = await db.prepare(`
+      SELECT ref, COUNT(*) AS c
+      FROM page_views
+      WHERE created_at >= ${since}
+      GROUP BY ref
+      ORDER BY c DESC
+    `).all();
+    const total = rows.reduce((s, r) => s + r.c, 0) || 1;
+    const sources = { "Google": 0, "Facebook": 0, "Twitter / X": 0, "Instagram": 0, "YouTube": 0, "Other Social": 0, "Direct": 0, "Other": 0 };
+    const sourceColors = { "Google":"#4285F4", "Facebook":"#1877F2", "Twitter / X":"#000", "Instagram":"#E4405F", "YouTube":"#FF0000", "Other Social":"#9C27B0", "Direct":"#4CAF50", "Other":"#9E9E9E" };
+    for (const r of rows) {
+      const ref = (r.ref || "").toLowerCase();
+      if (!ref) { sources["Direct"] += r.c; continue; }
+      if (ref.includes("google"))  { sources["Google"] += r.c; continue; }
+      if (ref.includes("facebook")){ sources["Facebook"] += r.c; continue; }
+      if (ref.includes("twitter") || ref.includes("x.com")){ sources["Twitter / X"] += r.c; continue; }
+      if (ref.includes("instagram")){ sources["Instagram"] += r.c; continue; }
+      if (ref.includes("youtube")){ sources["YouTube"] += r.c; continue; }
+      if (ref.includes("t.co") || ref.includes("linkedin") || ref.includes("pinterest") || ref.includes("reddit") || ref.includes("t.me") || ref.includes("whatsapp")){ sources["Other Social"] += r.c; continue; }
+      sources["Other"] += r.c;
+    }
+    const breakdown = Object.entries(sources).map(([label, count]) => ({
+      label, count, pct: Math.round((count / total) * 100), color: sourceColors[label]
+    })).filter(s => s.count > 0);
+    res.json({ range, total, breakdown });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* Top referrers (detailed list) */
+app.get("/api/analytics/top-referrers", requireAuth, async (req, res) => {
+  try {
+    const range = (req.query.range || "7d").toString();
+    const since = rangeSince(range);
+    const limit = Math.min(Math.max(parseInt(req.query.limit) || 20, 1), 100);
+    const rows = await db.prepare(`
+      SELECT ref, COUNT(*) AS c
+      FROM page_views
+      WHERE created_at >= ${since} AND ref IS NOT NULL AND ref != ''
+      GROUP BY ref
+      ORDER BY c DESC
+      LIMIT ?
+    `).all(limit);
+    const total = rows.reduce((s, r) => s + r.c, 0) || 1;
+    res.json({ range, total, list: rows.map(r => ({ ref: r.ref, count: r.c, pct: Math.round((r.c / total) * 100) })) });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

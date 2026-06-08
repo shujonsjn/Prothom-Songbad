@@ -338,8 +338,39 @@
             }).join("");
           }
         }
+        /* traffic sources */
+        loadTrafficSources(_dashRange);
       })
       .catch(err => console.error("Dashboard load failed:", err));
+  }
+
+  function loadTrafficSources(range){
+    const el = document.getElementById("trafficSources");
+    if (!el) return;
+    fetch("/api/analytics/referrers?range=" + encodeURIComponent(range), { headers: authHeader() })
+      .then(r => r.ok ? r.json() : Promise.reject(new Error("HTTP " + r.status)))
+      .then(data => {
+        const items = data.breakdown || [];
+        if (items.length === 0) {
+          el.innerHTML = '<p class="empty-state">এই সময়ে কোনো ভিজিটর নেই</p>';
+          return;
+        }
+        el.innerHTML = '<div class="traffic-grid">' + items.map(s =>
+          '<div class="traffic-item">' +
+            '<div class="traffic-head">' +
+              '<span class="traffic-dot" style="background:' + esc(s.color) + '"></span>' +
+              '<span class="traffic-label">' + esc(s.label) + '</span>' +
+              '<span class="traffic-count">' + s.count + '</span>' +
+              '<span class="traffic-pct">' + s.pct + '%</span>' +
+            '</div>' +
+            '<div class="traffic-bar"><div class="traffic-bar-fill" style="width:' + s.pct + '%;background:' + esc(s.color) + '"></div></div>' +
+          '</div>'
+        ).join("") + '</div>' +
+        '<div style="margin-top:12px;font-size:12px;color:var(--md-on-surface-var);text-align:center;">মোট ' + data.total + ' টি ভিজিট · ' + esc(rangeLabel(range)) + '</div>';
+      })
+      .catch(err => {
+        el.innerHTML = '<p class="empty-state">লোড ব্যর্থ: ' + esc(err.message) + '</p>';
+      });
   }
 
   function refreshSidebarCounts(){
