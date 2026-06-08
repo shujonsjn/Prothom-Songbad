@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>প্রোফাইল — প্রথম সংবাদ</title>
+<link rel="icon" type="image/svg+xml" href="/img/favicon.svg">
+<link rel="apple-touch-icon" href="/img/apple-touch-icon.svg">
+<meta name="theme-color" content="#c1131d">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Hind+Siliguri:wght@400;500;600;700&family=Noto+Serif+Bengali:wght@600;700;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+<link rel="stylesheet" href="css/theme.css">
+<style>
+.profile-page{ max-width:440px; margin:60px auto; padding:0 16px; }
+.profile-card{ background:#fff; border:1px solid #e0ddd0; padding:36px 32px; }
+.profile-card h1{ font-family:'Noto Serif Bengali',serif; font-size:22px; margin:0 0 4px; color:#0a0a0a; }
+.profile-card .sub{ font-family:'Hind Siliguri',sans-serif; font-size:13px; color:#888; margin-bottom:22px; }
+.profile-card label{ display:block; font-family:'Hind Siliguri',sans-serif; font-size:12px; font-weight:600; color:#555; margin-bottom:3px; }
+.profile-card input{ display:block; width:100%; padding:9px 10px; border:1px solid #ccc; border-radius:2px; font-family:'Hind Siliguri',sans-serif; font-size:14px; box-sizing:border-box; margin-bottom:10px; }
+.profile-card input:focus{ outline:none; border-color:#c1131d; }
+.login-box .btn-login{ display:block; width:100%; padding:10px; background:#c1131d; color:#fff; border:none; border-radius:2px; font-family:'Hind Siliguri',sans-serif; font-size:14px; font-weight:700; cursor:pointer; }
+.login-box .btn-login:hover{ background:#9e0e16; }
+.error-msg{ color:#c1131d; font-family:'Hind Siliguri',sans-serif; font-size:12px; margin-top:4px; display:none; }
+.profile-info{ display:none; }
+.info-grid{ margin-top:18px; }
+.info-row{ display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid #f0f0f0; font-family:'Hind Siliguri',sans-serif; font-size:14px; }
+.info-row:last-child{ border-bottom:none; }
+.info-row .il{ color:#888; }
+.info-row .iv{ font-weight:600; color:#0a0a0a; text-align:right; }
+.active-badge{ display:inline-block; padding:2px 10px; border-radius:10px; font-size:11px; font-weight:700; }
+.active-badge.yes{ background:#e6f7e6; color:#1b8c3a; }
+.active-badge.no{ background:#fef0ee; color:#c1131d; }
+.profile-actions{ display:flex; gap:8px; margin-top:16px; }
+.profile-actions button{ flex:1; padding:8px; border:none; border-radius:2px; font-family:'Hind Siliguri',sans-serif; font-size:13px; font-weight:600; cursor:pointer; }
+.btn-unsub{ background:#fef0ee; color:#c1131d; }
+.btn-unsub:hover{ background:#fce0dc; }
+.btn-resub{ background:#e6f7e6; color:#1b8c3a; }
+.btn-resub:hover{ background:#d0f0d0; }
+.btn-logout{ background:#f0f0f0; color:#555; }
+.btn-logout:hover{ background:#e0e0e0; }
+.profile-msg{ font-family:'Hind Siliguri',sans-serif; font-size:12px; margin-top:8px; text-align:center; display:none; }
+.back-link{ display:block; text-align:center; margin-top:18px; font-family:'Hind Siliguri',sans-serif; font-size:12px; color:#c1131d; text-decoration:none; }
+.back-link:hover{ text-decoration:underline; }
+</style>
+</head>
+<body>
+
+<div class="logo-area" style="border-bottom:1px solid #e0ddd0;">
+  <a href="/index.html" class="logo-link">
+    <img src="/img/logo.svg" alt="প্রথম সংবাদ" class="logo-img" width="320" height="88">
+  </a>
+</div>
+
+<div class="profile-page">
+  <div class="profile-card">
+
+    <!-- LOGIN -->
+    <div id="loginBox" class="login-box">
+      <h1>আপনার প্রোফাইল</h1>
+      <p class="sub">লগইন করে আপনার তথ্য দেখুন</p>
+      <label>ইমেইল</label>
+      <input id="plEmail" type="email" placeholder="your@email.com" autocomplete="email">
+      <label>পাসওয়ার্ড</label>
+      <input id="plPass" type="password" placeholder="পাসওয়ার্ড" autocomplete="current-password">
+      <button class="btn-login" onclick="loginSubscriber()">লগইন</button>
+      <div id="plError" class="error-msg"></div>
+    </div>
+
+    <!-- PROFILE INFO -->
+    <div id="profileInfo" class="profile-info">
+      <h1>স্বাগতম, <span id="piName">–</span></h1>
+      <p class="sub">আপনার নিবন্ধন তথ্য</p>
+      <div class="info-grid">
+        <div class="info-row"><span class="il">নাম</span><span class="iv" id="piFullName">–</span></div>
+        <div class="info-row"><span class="il">মোবাইল</span><span class="iv" id="piPhone">–</span></div>
+        <div class="info-row"><span class="il">ইমেইল</span><span class="iv" id="piEmail">–</span></div>
+        <div class="info-row"><span class="il">নিবন্ধন</span><span class="iv" id="piDate">–</span></div>
+        <div class="info-row"><span class="il">স্ট্যাটাস</span><span class="iv"><span id="piBadge" class="active-badge yes">সক্রিয়</span></span></div>
+      </div>
+      <div id="piActions" class="profile-actions">
+        <button class="btn-logout" onclick="logoutSubscriber()">লগআউট</button>
+      </div>
+      <div id="piMsg" class="profile-msg"></div>
+    </div>
+
+    <a href="/index.html" class="back-link">← প্রধান পাতায় ফিরে যান</a>
+  </div>
+</div>
+
+<script>
+function esc(s){
+  return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+}
+function timeAgo(iso){
+  if(!iso) return "";
+  const d = new Date((iso||"").replace(" ","T")+"Z");
+  if(isNaN(d.getTime())) return "";
+  const now = new Date();
+  let diffSec = Math.floor((now - d) / 1000);
+  if(diffSec < 0) diffSec = 0;
+  if(diffSec < 60) return diffSec + " সেকেন্ড আগে";
+  const m = Math.floor(diffSec / 60);
+  if(m < 60) return m + " মিনিট আগে";
+  const h = Math.floor(m / 60);
+  if(h < 24) return h + " ঘণ্টা আগে";
+  const d2 = Math.floor(h / 24);
+  if(d2 < 30) return d2 + " দিন আগে";
+  const mo = Math.floor(d2 / 30);
+  if(mo < 12) return mo + " মাস আগে";
+  return Math.floor(mo/12) + " বছর আগে";
+}
+function showMsg(el, text, color){
+  el.textContent = text; el.style.color = color || "#c1131d"; el.style.display = "block";
+}
+/* restore session */
+(function(){
+  const saved = localStorage.getItem("sub_session");
+  if(saved){
+    try {
+      const s = JSON.parse(saved);
+      if(s.email && s.name) { renderProfile(s); return; }
+    } catch(e){}
+  }
+})();
+
+async function loginSubscriber(){
+  const email = document.getElementById("plEmail");
+  const pass = document.getElementById("plPass");
+  const error = document.getElementById("plError");
+  error.style.display = "none";
+  if(!email.value.trim()){ showMsg(error, "ইমেইল লিখুন"); return; }
+  if(!pass.value){ showMsg(error, "পাসওয়ার্ড লিখুন"); return; }
+  try {
+    const r = await fetch("/api/subscriber/login", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ email: email.value.trim(), password: pass.value })
+    });
+    const j = await r.json();
+    if(!r.ok) throw new Error(j.error || "Login failed");
+    renderProfile(j.subscriber);
+  } catch(err) {
+    showMsg(error, "❌ " + err.message);
+  }
+}
+function renderProfile(s){
+  document.getElementById("loginBox").style.display = "none";
+  document.getElementById("profileInfo").style.display = "block";
+  document.getElementById("piName").textContent = esc(s.name);
+  document.getElementById("piFullName").textContent = esc(s.name);
+  document.getElementById("piPhone").textContent = esc(s.phone);
+  document.getElementById("piEmail").textContent = esc(s.email);
+  document.getElementById("piDate").textContent = timeAgo(s.created_at);
+  const badge = document.getElementById("piBadge");
+  const actions = document.getElementById("piActions");
+  if(s.active){
+    badge.textContent = "সক্রিয়";
+    badge.className = "active-badge yes";
+    actions.innerHTML = `<button class="btn-unsub" onclick="unsub()">আনসাবস্ক্রাইব</button><button class="btn-logout" onclick="logoutSubscriber()">লগআউট</button>`;
+  } else {
+    badge.textContent = "নিষ্ক্রিয়";
+    badge.className = "active-badge no";
+    actions.innerHTML = `<button class="btn-resub" onclick="resub()">পুনরায় সাবস্ক্রাইব</button><button class="btn-logout" onclick="logoutSubscriber()">লগআউট</button>`;
+  }
+  localStorage.setItem("sub_session", JSON.stringify({ email: s.email, name: s.name, phone: s.phone || "", active: s.active, address: s.address || "", avatar: s.avatar || "" }));
+}
+function logoutSubscriber(){
+  localStorage.removeItem("sub_session");
+  document.getElementById("profileInfo").style.display = "none";
+  document.getElementById("loginBox").style.display = "block";
+  document.getElementById("plEmail").value = "";
+  document.getElementById("plPass").value = "";
+}
+async function unsub(){
+  const s = JSON.parse(localStorage.getItem("sub_session") || "{}");
+  if(!s.email) return;
+  const pw = prompt("নিশ্চিত করতে আপনার পাসওয়ার্ড দিন:");
+  if(!pw) return;
+  const msg = document.getElementById("piMsg");
+  try {
+    const r = await fetch("/api/subscriber/unsubscribe", {
+      method: "PUT",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ email: s.email, password: pw })
+    });
+    const j = await r.json();
+    if(!r.ok) throw new Error(j.error);
+    showMsg(msg, "✅ আনসাবস্ক্রাইব সফল", "#1b8c3a");
+    location.reload();
+  } catch(err) {
+    showMsg(msg, "❌ " + err.message);
+  }
+}
+async function resub(){
+  const s = JSON.parse(localStorage.getItem("sub_session") || "{}");
+  if(!s.email) return;
+  const pw = prompt("নিশ্চিত করতে আপনার পাসওয়ার্ড দিন:");
+  if(!pw) return;
+  const msg = document.getElementById("piMsg");
+  try {
+    const r = await fetch("/api/subscriber/resubscribe", {
+      method: "PUT",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ email: s.email, password: pw })
+    });
+    const j = await r.json();
+    if(!r.ok) throw new Error(j.error);
+    showMsg(msg, "✅ পুনরায় সাবস্ক্রাইব সফল", "#1b8c3a");
+    location.reload();
+  } catch(err) {
+    showMsg(msg, "❌ " + err.message);
+  }
+}
+</script>
+</body>
+</html>

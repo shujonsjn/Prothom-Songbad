@@ -18,6 +18,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Hind+Siliguri:wght@400;500;600;700&family=Noto+Serif+Bengali:wght@600;700;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
 
 <link rel="stylesheet" href="css/theme.css">
 
@@ -72,6 +73,7 @@
     <h3>সর্বাধিক পঠিত</h3>
     <div id="sideNews"></div>
     <div id="sidebarBanners" class="sidebar-banners"></div>
+    <div id="subscribeWidget" class="subscribe-widget"></div>
   </aside>
 
 </div>
@@ -83,6 +85,118 @@
   <p>বাংলাদেশ ও বিশ্বের নির্ভরযোগ্য সংবাদ</p>
   <p class="copy">© ২০২৬ প্রথম সংবাদ — All Rights Reserved</p>
 </footer>
+
+<div id="profileModal" class="profile-modal-overlay" style="display:none;" onclick="closeProfileModal(event)">
+  <div class="profile-modal" onclick="event.stopPropagation()">
+    <button class="pm-close" onclick="closeProfileModal()">&times;</button>
+
+    <!-- LOGIN FORM -->
+    <div id="pmLogin" class="pm-body">
+      <h3>আপনার প্রোফাইল</h3>
+      <p class="pm-sub">লগইন করে আপনার তথ্য দেখুন</p>
+      <input id="pmEmail" type="email" placeholder="ইমেইল" autocomplete="email">
+      <input id="pmPass" type="password" placeholder="পাসওয়ার্ড" autocomplete="current-password">
+      <button class="pm-btn" onclick="pmLogin()">লগইন</button>
+      <div id="pmLoginMsg" class="pm-msg"></div>
+      <p class="pm-forgot-link" onclick="showPmForgot()">পাসওয়ার্ড ভুলে গেছেন?</p>
+      <p class="pm-signup-link" onclick="showPmSignup()">নতুন ব্যবহারকারী? নিবন্ধন করুন</p>
+    </div>
+
+    <div id="pmSignup" class="pm-body" style="display:none;">
+      <h3>নিবন্ধন</h3>
+      <p class="pm-sub">নতুন অ্যাকাউন্ট তৈরি করুন</p>
+      <input id="pmRegName" type="text" placeholder="আপনার নাম">
+      <input id="pmRegPhone" type="text" placeholder="মোবাইল নম্বর">
+      <input id="pmRegEmail" type="email" placeholder="ইমেইল">
+      <input id="pmRegPass" type="password" placeholder="পাসওয়ার্ড (ন্যূনতম ৪ অক্ষর)">
+      <input id="pmRegConf" type="password" placeholder="পাসওয়ার্ড আবার লিখুন">
+      <button class="pm-btn" onclick="pmSignup()">নিবন্ধন করুন</button>
+      <div id="pmSignupMsg" class="pm-msg"></div>
+      <p class="pm-forgot-link" onclick="showPmLogin()">ইতিমধ্যে অ্যাকাউন্ট আছে? লগইন করুন</p>
+    </div>
+
+    <!-- FORGOT PASSWORD -->
+    <div id="pmForgot" class="pm-body" style="display:none;">
+      <h3>পাসওয়ার্ড রিসেট</h3>
+      <p class="pm-sub">আপনার ইমেইল দিন, একটি রিসেট কোড পাঠানো হবে</p>
+      <input id="pmForgotEmail" type="email" placeholder="ইমেইল">
+      <button class="pm-btn" onclick="pmSendResetCode()">কোড পাঠান</button>
+      <div id="pmForgotMsg" class="pm-msg"></div>
+      <p class="pm-forgot-link" onclick="showPmLogin()">লগইনে ফিরে যান</p>
+    </div>
+
+    <!-- RESET PASSWORD -->
+    <div id="pmReset" class="pm-body" style="display:none;">
+      <h3>নতুন পাসওয়ার্ড</h3>
+      <p class="pm-sub">আপনার ইমেইলে পাঠানো কোড ও নতুন পাসওয়ার্ড দিন</p>
+      <input id="pmResetCode" type="text" placeholder="রিসেট কোড" inputmode="numeric" maxlength="6">
+      <input id="pmResetPass" type="password" placeholder="নতুন পাসওয়ার্ড (ন্যূনতম ৪ অক্ষর)">
+      <input id="pmResetConf" type="password" placeholder="নতুন পাসওয়ার্ড আবার লিখুন">
+      <button class="pm-btn" onclick="pmResetPassword()">পাসওয়ার্ড রিসেট করুন</button>
+      <div id="pmResetMsg" class="pm-msg"></div>
+      <p class="pm-forgot-link" onclick="showPmLogin()">লগইনে ফিরে যান</p>
+    </div>
+
+    <!-- PROFILE INFO -->
+    <div id="pmInfo" class="pm-body" style="display:none;">
+
+      <!-- View mode -->
+      <div id="pmViewInfo">
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;">
+          <div id="pmAvatar" class="pm-avatar" style="user-select:none;">U</div>
+          <div>
+            <div style="font-weight:700;font-size:16px;" id="pmName">–</div>
+            <div style="font-size:12px;color:#888;"><span id="pmBadge" class="pm-badge yes">সক্রিয়</span></div>
+          </div>
+        </div>
+        <div class="pm-info-grid">
+          <div class="pm-row"><span class="pm-l">ইমেইল</span><span class="pm-v" id="pmInfoEmail">–</span></div>
+          <div class="pm-row"><span class="pm-l">মোবাইল</span><span class="pm-v" id="pmPhone">–</span></div>
+          <div class="pm-row"><span class="pm-l">ঠিকানা</span><span class="pm-v" id="pmAddress">–</span></div>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:10px;">
+          <button id="pmEditBtn" class="pm-btn pm-btn-sm pm-btn-outline" onclick="togglePmEdit()">সম্পাদনা</button>
+        </div>
+      </div>
+
+      <!-- Edit mode -->
+      <div id="pmEditInfo" style="display:none;">
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;">
+          <div id="pmAvatarEdit" class="pm-avatar" style="user-select:none;">U</div>
+          <div style="flex:1;">
+            <div style="font-size:11px;color:#888;margin-bottom:2px;">প্রোফাইল ছবি</div>
+            <input id="pmAvatarFile" class="pm-input-file" type="file" accept="image/*">
+            <input id="pmAvatarImg" class="pm-input-edit" type="text" placeholder="অথবা ছবির URL দিন" style="margin-top:4px;">
+          </div>
+        </div>
+        <label class="pm-label">নাম</label>
+        <input id="pmEditName" class="pm-input-edit" type="text" placeholder="আপনার নাম">
+        <label class="pm-label" style="margin-top:8px;">মোবাইল</label>
+        <input id="pmEditPhone" class="pm-input-edit" type="text" placeholder="মোবাইল নম্বর">
+        <label class="pm-label" style="margin-top:8px;">ঠিকানা</label>
+        <input id="pmEditAddress" class="pm-input-edit" type="text" placeholder="বর্তমান ঠিকানা">
+        <div style="display:flex;gap:6px;margin-top:10px;">
+          <button id="pmSaveBtn" class="pm-btn pm-btn-sm" onclick="pmSaveProfile()">সংরক্ষণ</button>
+          <button id="pmCancelBtn" class="pm-btn pm-btn-sm pm-btn-outline" onclick="cancelPmEdit()">বাতিল</button>
+        </div>
+      </div>
+
+      <hr style="border:none;border-top:1px solid #eee;margin:14px 0;">
+
+      <h4 style="font-family:'Hind Siliguri',sans-serif;font-size:13px;color:#c1131d;margin:0 0 8px;">পাসওয়ার্ড পরিবর্তন</h4>
+      <input id="pmCurPass" type="password" placeholder="বর্তমান পাসওয়ার্ড">
+      <input id="pmNewPass" type="password" placeholder="নতুন পাসওয়ার্ড (ন্যূনতম ৪ অক্ষর)">
+      <input id="pmConfPass" type="password" placeholder="নতুন পাসওয়ার্ড আবার লিখুন">
+      <button class="pm-btn pm-btn-sm" onclick="pmChangePass()">পাসওয়ার্ড পরিবর্তন করুন</button>
+
+      <div style="display:flex;gap:8px;margin-top:12px;">
+        <button class="pm-btn pm-btn-outline" onclick="pmLogout()">লগআউট</button>
+        <button class="pm-btn pm-btn-outline" onclick="closeProfileModal()">বন্ধ করুন</button>
+      </div>
+      <div id="pmInfoMsg" class="pm-msg"></div>
+    </div>
+  </div>
+</div>
 
 <script src="js/subcategories.js"></script>
 <script src="js/nav.js"></script>

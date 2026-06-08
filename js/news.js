@@ -23,6 +23,7 @@
       currentArticle = n;
       document.title = (n.title || "সংবাদ") + " — প্রথম সংবাদ";
       paintArticle(n);
+      initCarousel();
       renderVideo(n.video);
       setShareLinks(n);
       loadRelated(n);
@@ -52,9 +53,18 @@
       $("dek").textContent = "";
     }
 
-    /* image + caption (caption = category + time) */
+    /* image + gallery carousel */
+    const slot = $("mediaSlot");
     const img = $("img");
-    if(n.image){
+    let gallery = [];
+    if(n.gallery){
+      try { gallery = JSON.parse(n.gallery); } catch {}
+    }
+    if(n.image && gallery.length > 0){
+      const allImages = [n.image, ...gallery.filter(Boolean)];
+      slot.innerHTML = buildCarousel(allImages, n.title || "") +
+        '<div id="videoWrap" class="video-wrap" hidden><div id="videoContainer"></div></div>';
+    } else if(n.image){
       img.src = n.image;
       img.alt = n.title || "";
     } else {
@@ -153,6 +163,63 @@
     const words = (text || "").trim().split(/\s+/).length;
     const mins = Math.max(1, Math.round(words / 180));
     return mins;
+  }
+
+  /* ----- image gallery carousel ----- */
+  function buildCarousel(images, alt){
+    const slides = images.map((url, i) =>
+      `<div class="carousel-slide${i === 0 ? " active" : ""}">
+        <img src="${escAttr(url)}" alt="${escAttr(alt)}" loading="${i === 0 ? "eager" : "lazy"}">
+      </div>`
+    ).join("");
+    const dots = images.map((_, i) =>
+      `<span class="carousel-dot${i === 0 ? " active" : ""}" data-index="${i}"></span>`
+    ).join("");
+    return `<div class="carousel" id="imgCarousel">
+      <div class="carousel-track">${slides}</div>
+      <button class="carousel-btn carousel-prev" aria-label="Previous">‹</button>
+      <button class="carousel-btn carousel-next" aria-label="Next">›</button>
+      <div class="carousel-dots">${dots}</div>
+    </div>`;
+  }
+
+  function initCarousel(){
+    const carousel = document.getElementById("imgCarousel");
+    if(!carousel) return;
+    const track = carousel.querySelector(".carousel-track");
+    const slides = track.querySelectorAll(".carousel-slide");
+    const dots = carousel.querySelectorAll(".carousel-dot");
+    const prev = carousel.querySelector(".carousel-prev");
+    const next = carousel.querySelector(".carousel-next");
+    let current = 0;
+    let interval;
+
+    function goTo(index){
+      slides.forEach(s => s.classList.remove("active"));
+      dots.forEach(d => d.classList.remove("active"));
+      slides[index].classList.add("active");
+      dots[index].classList.add("active");
+      current = index;
+    }
+
+    function nextSlide(){ goTo((current + 1) % slides.length); }
+    function prevSlide(){ goTo((current - 1 + slides.length) % slides.length); }
+
+    prev.addEventListener("click", () => { prevSlide(); resetInterval(); });
+    next.addEventListener("click", () => { nextSlide(); resetInterval(); });
+
+    dots.forEach(d => {
+      d.addEventListener("click", () => {
+        goTo(Number(d.dataset.index));
+        resetInterval();
+      });
+    });
+
+    carousel.addEventListener("mouseenter", () => clearInterval(interval));
+    carousel.addEventListener("mouseleave", () => { interval = setInterval(nextSlide, 5000); });
+    interval = setInterval(nextSlide, 5000);
+
+    function resetInterval(){ clearInterval(interval); interval = setInterval(nextSlide, 5000); }
   }
 
   /* ----- share links ----- */
@@ -287,6 +354,19 @@
   }
 
   /* ----- helpers ----- */
+  function timeAgo(iso){
+    if(!iso) return "";
+    const diff = Date.now() - new Date(iso).getTime();
+    const mins = Math.floor(diff / 60000);
+    if(mins < 1) return "এখনই";
+    if(mins < 60) return mins + " মিনিট আগে";
+    const hrs = Math.floor(mins / 60);
+    if(hrs < 24) return hrs + " ঘণ্টা আগে";
+    const days = Math.floor(hrs / 24);
+    if(days < 7) return days + " দিন আগে";
+    return new Date(iso).toLocaleDateString("bn-BD", { day:"numeric", month:"short", year:"numeric" });
+  }
+
   function escHtml(s){
     return String(s || "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
   }
@@ -305,6 +385,85 @@
       }
     } catch {}
   }
+
+  /* ----- comments ----- */
+  setTimeout(() => {
+    loadComments();
+    const sub = JSON.parse(localStorage.getItem("sub_session") || "null");
+    if (sub && sub.email) {
+      document.getElementById("commentLoginNote").style.display = "none";
+      document.getElementById("commentLoggedIn").style.display = "";
+      document.getElementById("commentUserName").textContent = "মন্তব্য করছেন: " + (sub.name || sub.email);
+    }
+  }, 0);
+
+  async function loadComments(){
+    const box = document.getElementById("commentsList");
+    try {
+      const r = await fetch("/api/comments?news_id=" + id);
+      if(!r.ok) throw 0;
+      const data = await r.json();
+      const list = data.comments || [];
+      if(!list.length){ box.innerHTML = '<p class="comments-empty">কোনো মন্তব্য নেই। প্রথম মন্তব্য করুন!</p>'; return; }
+      box.innerHTML = list.map(c => {
+        const subSession = JSON.parse(localStorage.getItem("sub_session") || "null");
+        const isAdmin = (subSession && subSession.is_admin) || localStorage.getItem("adminAuth") ? true : false;
+        const isOwner = subSession && subSession.email && c.subscriber_email && subSession.email.toLowerCase() === c.subscriber_email.toLowerCase();
+        const showDel = isAdmin || isOwner;
+        const delBtn = showDel ? `<button class="comment-del" onclick="deleteComment(${c.id})" title="মুছে ফেলুন">&times;</button>` : "";
+        return `<div class="comment-item">
+          <div class="comment-head">
+            <span class="comment-author">${escHtml(c.subscriber_name || c.subscriber_email)}</span>
+            <span class="comment-time">${timeAgo(c.created_at)}</span>
+            ${delBtn}
+          </div>
+          <div class="comment-body-text">${escHtml(c.body)}</div>
+        </div>`;
+      }).join("");
+    } catch { box.innerHTML = ''; }
+  }
+
+  window.submitComment = async function(){
+    const sub = JSON.parse(localStorage.getItem("sub_session") || "null");
+    if (!sub || !sub.email) return;
+    const body = document.getElementById("commentBody").value.trim();
+    if (!body) return;
+    const msgEl = document.getElementById("commentMsg");
+    msgEl.textContent = "";
+    try {
+      const r = await fetch("/api/comments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ news_id: Number(id), email: sub.email, body })
+      });
+      const data = await r.json();
+      if (!r.ok) { msgEl.textContent = data.error || "মন্তব্য করা যায়নি"; return; }
+      document.getElementById("commentBody").value = "";
+      msgEl.textContent = "মন্তব্য করা হয়েছে!";
+      msgEl.style.color = "#2e7d32";
+      loadComments();
+    } catch { msgEl.textContent = "নেটওয়ার্ক ত্রুটি"; }
+  };
+
+  window.deleteComment = async function(cid){
+    if (!confirm("মন্তব্যটি মুছে ফেলবেন?")) return;
+    try {
+      const subSession = JSON.parse(localStorage.getItem("sub_session") || "null");
+      const headers = {};
+      if (localStorage.getItem("adminAuth")) {
+        headers["Authorization"] = localStorage.getItem("adminAuth");
+      } else if (subSession && subSession.is_admin && subSession.email) {
+        headers["X-Admin-Email"] = subSession.email;
+      } else if (subSession && subSession.email) {
+        headers["X-Comment-Email"] = subSession.email;
+      }
+      const r = await fetch("/api/comments/" + cid, {
+        method: "DELETE",
+        headers
+      });
+      if (r.ok) loadComments();
+    } catch {}
+  };
 
   function showError(msg){
     const kicker    = document.getElementById("kicker");

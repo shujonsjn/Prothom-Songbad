@@ -350,6 +350,7 @@
         </div>`;
     });
     loadSidebarBanners();
+    renderSubscribeWidget();
   }
 
   /* ===== Sidebar banners (public) ===== */
@@ -416,6 +417,63 @@
       }
     });
   }
+
+  /* ===== Subscribe widget (sidebar) ===== */
+  function renderSubscribeWidget(){
+    const wrap = document.getElementById("subscribeWidget");
+    if(!wrap) return;
+    wrap.innerHTML = `
+      <div class="subscribe-box">
+        <h4 class="subscribe-title">নিউজলেটার</h4>
+        <p class="subscribe-desc">সর্বশেষ সংবাদ পেতে নিবন্ধন করুন</p>
+        <div id="subscribeForm" class="subscribe-form">
+          <input id="subName" type="text" placeholder="আপনার নাম" autocomplete="name">
+          <input id="subPhone" type="tel" placeholder="মোবাইল নম্বর" autocomplete="tel">
+          <input id="subEmail" type="email" placeholder="ইমেইল" autocomplete="email">
+          <input id="subPass" type="password" placeholder="পাসওয়ার্ড (ন্যূনতম ৪ অক্ষর)" autocomplete="new-password">
+          <button type="button" class="sub-submit" onclick="submitSubscribe()">নিবন্ধন</button>
+          <div id="subMsg" class="sub-msg"></div>
+        </div>
+        <a href="/profile.html" class="manage-sub-link">আপনার প্রোফাইল দেখুন →</a>
+      </div>`;
+  }
+
+  window.submitSubscribe = function(){
+    const name = document.getElementById("subName");
+    const phone = document.getElementById("subPhone");
+    const email = document.getElementById("subEmail");
+    const pass = document.getElementById("subPass");
+    const msg = document.getElementById("subMsg");
+    if(!name || !phone || !email || !pass || !msg) return;
+    if(!name.value.trim()){ msg.textContent = "নাম লিখুন"; msg.style.color="#c1131d"; return; }
+    if(!phone.value.trim()){ msg.textContent = "মোবাইল নম্বর লিখুন"; msg.style.color="#c1131d"; return; }
+    if(!email.value.trim()){ msg.textContent = "ইমেইল লিখুন"; msg.style.color="#c1131d"; return; }
+    if(pass.value.length < 4){ msg.textContent = "পাসওয়ার্ড কমপক্ষে ৪ অক্ষর"; msg.style.color="#c1131d"; return; }
+    msg.textContent = "নিবন্ধন হচ্ছে...";
+    msg.style.color = "#888";
+    fetch("/api/subscribe", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: name.value.trim(),
+        phone: phone.value.trim(),
+        email: email.value.trim(),
+        password: pass.value
+      })
+    }).then(r => r.json()).then(j => {
+      if(j.ok){
+        msg.textContent = "✅ নিবন্ধন সফল! এখন প্রোফাইলে লগইন করুন।";
+        msg.style.color = "#1b8c3a";
+        name.value = ""; phone.value = ""; email.value = ""; pass.value = "";
+      } else {
+        msg.textContent = "❌ " + (j.error || "ব্যর্থ");
+        msg.style.color = "#c1131d";
+      }
+    }).catch(err => {
+      msg.textContent = "❌ সংযোগ ব্যর্থ";
+      msg.style.color = "#c1131d";
+    });
+  };
 
   function renderFullBannerHtml(rows){
     return rows.map(b => {
