@@ -416,13 +416,14 @@ export default async function handler(req, res) {
         const needsDetails = (existing.details || "").length < 200 && it.summary;
         const needsVideo   = !existing.video && it.video;
         const needsSub     = !existing.subcategory && it.subcategory;
-        if (needsDetails || needsVideo || needsSub) {
+        const needsGallery = !existing.gallery && it.gallery;
+        if (needsDetails || needsVideo || needsSub || needsGallery) {
           const newDetails = needsDetails
             ? `${it.summary}\n\n— সারসংক্ষেপ: ${it.link}`.slice(0, 2000)
             : existing.details;
-          const newVideo = needsVideo ? it.video : existing.video;
-          const newSub   = needsSub   ? it.subcategory : existing.subcategory;
-          const newGallery = (!existing.gallery && it.gallery) ? it.gallery : existing.gallery;
+          const newVideo   = needsVideo   ? it.video        : existing.video;
+          const newSub     = needsSub     ? it.subcategory  : existing.subcategory;
+          const newGallery = needsGallery ? it.gallery      : existing.gallery;
           await run(
             "UPDATE news SET details = ?, video = ?, subcategory = ?, gallery = ? WHERE id = ?",
             newDetails, newVideo, newSub, newGallery, existing.id
