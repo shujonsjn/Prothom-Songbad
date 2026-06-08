@@ -404,7 +404,7 @@
 
         const codes = {};
         const maxVal = Math.max(...items.map(i => i.count), 1);
-        items.forEach(i => { codes[i.country.toLowerCase()] = i.count; });
+        items.forEach(i => { codes[i.country] = i.count; });
 
         const existing = document.querySelector("#locationsMap svg");
         if(existing){
@@ -427,13 +427,13 @@
                 hover: { fill: "#b39ddb" }
               },
               onRegionTooltipShow(evt, tooltip, code){
-                const item = items.find(i => i.country === code.toLowerCase());
+                const item = items.find(i => i.country === code);
                 tooltip.text(item ?
                   '<div style="font-size:13px;font-weight:500;padding:2px 0;">' + esc(item.name) + ' <span style="opacity:.7;font-size:11px;">(' + esc(item.country) + ')</span></div><div style="font-size:13px;font-weight:600;color:#6750a4;">' + item.count + ' visits <span style="font-weight:400;font-size:11px;color:#999;">(' + item.pct + '%)</span></div>' :
                   code, true);
               },
               onRegionClick(evt, code){
-                const item = items.find(i => i.country === code.toLowerCase());
+                const item = items.find(i => i.country === code);
                 if(item){
                   toast(esc(item.name) + ' (' + esc(item.country) + ') থেকে ' + item.count + ' টি ভিজিট • ' + item.pct + '%');
                 }
