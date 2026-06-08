@@ -426,14 +426,28 @@
                 initial: { fill: "#e0e0e0", stroke: "#fff", "stroke-width": .5 },
                 hover: { fill: "#b39ddb" }
               },
-              onRegionTooltipShow(evt, tooltip, code){
-                const item = items.find(i => i.country.toLowerCase() === code);
-                if(item){
-                  tooltip.text('<div style="font-size:13px;font-weight:500;padding:4px 0;">' + esc(item.name) + ' <span style="opacity:.7;font-size:11px;">(' + esc(item.country) + ')</span></div>' +
-                    '<div style="font-size:15px;font-weight:700;color:#6750a4;margin-top:2px;">' + item.count + ' টি ভিজিট <span style="font-weight:400;font-size:12px;color:#888;">(' + item.pct + '%)</span></div>', true);
-                } else {
-                  tooltip.text(code.toUpperCase(), true);
+              labels: {
+                regions: {
+                  render(code){
+                    const item = items.find(i => i.country.toLowerCase() === code);
+                    return item ? item.count.toString() : null;
+                  },
+                  offsets(code){
+                    const offs = { BD:[0,0], US:[10,0], GB:[-10,0], SE:[5,0], IN:[0,0], NP:[0,0], PK:[0,0], LK:[0,0], MY:[0,10], SG:[0,10], AU:[-10,10], SA:[-10,0], AE:[10,0], QA:[0,0], KW:[0,0], OM:[0,0], BH:[0,0], CN:[0,0], JP:[10,0], KR:[0,0], TW:[0,10], HK:[0,10], PH:[0,10], ID:[0,10], TH:[0,0], VN:[0,0], RU:[-20,0], DE:[0,0], FR:[0,0], IT:[0,0], ES:[0,0], NL:[0,0], CA:[-20,10], EG:[0,0], ZA:[0,10], NG:[0,0], KE:[0,0], BR:[0,10], AR:[0,10] };
+                    return offs[code.toUpperCase()] || [0,0];
+                  }
                 }
+              },
+              onRegionTooltipShow(evt, tooltip, code){
+                try {
+                  const item = items.find(i => i.country.toLowerCase() === code);
+                  if(item){
+                    tooltip.selector.innerHTML = '<div style="font-size:13px;font-weight:500;padding:4px 0;">' + esc(item.name) + ' <span style="opacity:.7;font-size:11px;">(' + esc(item.country) + ')</span></div>' +
+                      '<div style="font-size:15px;font-weight:700;color:#6750a4;margin-top:2px;">' + item.count + ' টি ভিজিট <span style="font-weight:400;font-size:12px;color:#888;">(' + item.pct + '%)</span></div>';
+                  } else {
+                    tooltip.selector.innerHTML = code.toUpperCase();
+                  }
+                } catch(e){ console.warn("tooltip err", e); }
               },
               onRegionClick(evt, code){
                 const item = items.find(i => i.country.toLowerCase() === code);
