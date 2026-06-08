@@ -102,6 +102,10 @@
           <span class="sb-label">Subscribers</span>
           <span class="sb-count" id="cntSubscribers">–</span>
         </a>
+        <a href="#" class="sb-link" data-section="locations">
+          <span class="sb-icon"><span class="ms">public</span></span>
+          <span class="sb-label">Locations</span>
+        </a>
         <a href="#" class="sb-link" data-section="notifications">
           <span class="sb-icon"><span class="ms">notifications</span></span>
           <span class="sb-label">Notifications</span>
@@ -229,17 +233,7 @@
             <div id="trafficSources"><p class="empty-state">Loading…</p></div>
           </div>
         </div>
-        <div class="dash-grid">
-          <div class="card dash-card">
-            <h3><span class="md-icon"><span class="ms">public</span></span>Visitor Locations</h3>
-            <div id="visitorLocations" style="position:relative;">
-              <div id="locationsMap" style="height:380px;margin-bottom:16px;"></div>
-              <div id="locationsList"></div>
-              <p class="empty-state">Loading…</p>
-            </div>
-          </div>
-        </div>
-
+        
         <div class="dash-grid">
           <div class="card dash-card">
             <h3><span class="md-icon"><span class="ms">trending_up</span></span>Top Viewed News</h3>
@@ -637,6 +631,32 @@
             <div class="inbox-empty">Select a message to read</div>
           </main>
         </div>
+      </section>
+
+      <!-- ===== LOCATIONS SECTION (full page) ===== -->
+      <section class="admin-section" data-section="locations">
+        <div class="dash-head">
+          <h2 class="section-title"><span class="md-icon"><span class="ms">public</span></span>Visitor Locations</h2>
+          <div class="dash-range" id="locRange">
+            <button class="range-btn active" data-range="24h">24h</button>
+            <button class="range-btn" data-range="7d">7d</button>
+            <button class="range-btn" data-range="30d">30d</button>
+            <button class="range-btn" data-range="all">All</button>
+          </div>
+        </div>
+        <div class="loc-layout">
+          <div class="loc-map-wrap" id="locMapWrap">
+            <div id="locationsMap" style="height:100%;width:100%;"></div>
+          </div>
+          <div class="loc-sidebar">
+            <div class="loc-sidebar-header">
+              <span class="ms">list</span> Countries
+              <span class="loc-total" id="locTotal">0</span>
+            </div>
+            <div id="locationsList" class="loc-list"></div>
+          </div>
+        </div>
+        <div class="loc-footer" id="locFooter"></div>
       </section>
 
     </main>

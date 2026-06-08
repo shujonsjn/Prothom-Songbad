@@ -338,9 +338,8 @@
             }).join("");
           }
         }
-        /* traffic sources + locations */
+        /* traffic sources */
         loadTrafficSources(_dashRange);
-        loadVisitorLocations(_dashRange);
       })
       .catch(err => console.error("Dashboard load failed:", err));
   }
@@ -374,73 +373,80 @@
       });
   }
 
-  function loadVisitorLocations(range){
-    const el = document.getElementById("visitorLocations");
-    if (!el) return;
+  function loadLocationsPage(range){
+    const mapWrap = document.getElementById("locMapWrap");
+    const listEl = document.getElementById("locationsList");
+    const totalEl = document.getElementById("locTotal");
+    const footerEl = document.getElementById("locFooter");
+    if (!mapWrap || !listEl) return;
     fetch("/api/analytics/countries?range=" + encodeURIComponent(range), { headers: authHeader() })
       .then(r => r.ok ? r.json() : Promise.reject(new Error("HTTP " + r.status)))
       .then(data => {
         const items = data.list || [];
-        el.innerHTML = '';
         if (items.length === 0) {
-          el.innerHTML = '<p class="empty-state">এই সময়ে লোকেশন ডাটা নেই</p>';
+          listEl.innerHTML = '<div class="loc-empty">এই সময়ে লোকেশন ডাটা নেই</div>';
+          if(totalEl) totalEl.textContent = "0";
+          if(footerEl) footerEl.innerHTML = "";
           return;
         }
-        const mapEl = document.createElement("div");
-        mapEl.id = "locationsMap";
-        mapEl.style.height = "300px";
-        mapEl.style.marginBottom = "16px";
-        el.appendChild(mapEl);
+        if(totalEl) totalEl.textContent = data.total;
+        if(footerEl) footerEl.innerHTML = '<span style="font-size:12px;color:var(--md-on-surface-var);">মোট ' + data.total + ' টি ভিজিট · ' + esc(rangeLabel(range)) + '</span>';
 
-        const listEl = document.createElement("div");
-        listEl.id = "locationsList";
-        listEl.innerHTML = '<div class="traffic-grid">' + items.map(s =>
-          '<div class="traffic-item">' +
-            '<div class="traffic-head">' +
-              '<span class="traffic-dot" style="background:#6750a4"></span>' +
-              '<span class="traffic-label">' + esc(s.name) + ' <span style="opacity:.5;font-size:11px;">(' + esc(s.country) + ')</span></span>' +
-              '<span class="traffic-count">' + s.count + '</span>' +
-              '<span class="traffic-pct">' + s.pct + '%</span>' +
-            '</div>' +
-            '<div class="traffic-bar"><div class="traffic-bar-fill" style="width:' + s.pct + '%;background:#6750a4"></div></div>' +
+        listEl.innerHTML = items.map(s =>
+          '<div class="loc-item">' +
+            '<span class="loc-flag">' + esc(s.country) + '</span>' +
+            '<span class="loc-name">' + esc(s.name) + '</span>' +
+            '<span class="loc-bar-wrap"><span class="loc-bar" style="width:' + s.pct + '%"></span></span>' +
+            '<span class="loc-count">' + s.count + '</span>' +
+            '<span class="loc-pct">' + s.pct + '%</span>' +
           '</div>'
-        ).join("") + '</div>' +
-        '<div style="margin-top:12px;font-size:12px;color:var(--md-on-surface-var);text-align:center;">মোট ' + data.total + ' টি ভিজিট · ' + esc(rangeLabel(range)) + '</div>';
-        el.appendChild(listEl);
+        ).join("");
 
         const codes = {};
         const maxVal = Math.max(...items.map(i => i.count), 1);
         items.forEach(i => { codes[i.country.toLowerCase()] = i.count; });
-        try {
-          new jsVectorMap({
-            selector: "#locationsMap",
-            map: "world",
-            zoomOnScroll: false,
-            zoomButtons: false,
-            regionStyle: {
-              initial: { fill: "#e0e0e0", stroke: "#fff", "stroke-width": .5 },
-              hover: { fill: "#b39ddb" }
-            },
-            labels: {
-              regions: { render(code){ return code; } }
-            },
-            series: {
-              regions: [{
-                values: codes,
-                min: 0,
-                max: maxVal,
-                minOpacity: .3,
-                maxOpacity: .9,
-                scale: ["#e8def8", "#6750a4"]
-              }]
-            }
-          });
-        } catch(e){
-          console.warn("Map render failed:", e);
+
+        const existing = document.querySelector("#locationsMap svg");
+        if(existing){
+          try {
+            const m = document.querySelector("#locationsMap .jsvectormap");
+            if(m) m.remove();
+          } catch(e){}
+        }
+        const mapDiv = document.getElementById("locationsMap");
+        if(mapDiv){
+          mapDiv.innerHTML = '';
+          try {
+            new jsVectorMap({
+              selector: "#locationsMap",
+              map: "world",
+              zoomOnScroll: true,
+              zoomButtons: true,
+              regionStyle: {
+                initial: { fill: "#e0e0e0", stroke: "#fff", "stroke-width": .5 },
+                hover: { fill: "#b39ddb" }
+              },
+              labels: {
+                regions: { render(code){ return code; } }
+              },
+              series: {
+                regions: [{
+                  values: codes,
+                  min: 0,
+                  max: maxVal,
+                  minOpacity: .2,
+                  maxOpacity: .85,
+                  scale: ["#e8def8", "#6750a4"]
+                }]
+              }
+            });
+          } catch(e){
+            console.warn("Map render failed:", e);
+          }
         }
       })
       .catch(err => {
-        el.innerHTML = '<p class="empty-state">লোড ব্যর্থ: ' + esc(err.message) + '</p>';
+        listEl.innerHTML = '<div class="loc-empty">লোড ব্যর্থ: ' + esc(err.message) + '</div>';
       });
   }
 
@@ -1898,6 +1904,24 @@
       e.preventDefault();
       showSection("notifications");
       loadNotifications();
+    });
+  });
+
+  /* ===== LOCATIONS ===== */
+  let _locRange = "24h";
+  document.querySelectorAll('.sb-link[data-section="locations"]').forEach(a => {
+    a.addEventListener("click", (e) => {
+      e.preventDefault();
+      showSection("locations");
+      loadLocationsPage(_locRange);
+    });
+  });
+  document.querySelectorAll("#locRange .range-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll("#locRange .range-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      _locRange = btn.getAttribute("data-range");
+      loadLocationsPage(_locRange);
     });
   });
 
