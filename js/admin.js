@@ -1168,14 +1168,14 @@
     el.textContent = msg;
   }
 
-  /* Load profile when profile section opens */
-  document.querySelectorAll('.sb-link[data-section="profile"]').forEach(a => {
-    a.addEventListener("click", (e) => {
-      e.preventDefault();
+  /* Load profile when sb-user (avatar/name) is clicked */
+  const sbUser = document.querySelector('.sb-user[data-section="profile"]');
+  if (sbUser) {
+    sbUser.addEventListener("click", () => {
       showSection("profile");
       loadProfile();
     });
-  });
+  }
 
   /* ============================================================
      INBOX

@@ -442,6 +442,16 @@ button:disabled{ opacity:.38; pointer-events:none; }
   gap:12px;
   padding:12px;
   margin-bottom:8px;
+  cursor:pointer;
+  border-radius:var(--md-radius-md);
+  transition:background .15s;
+}
+.sb-user:hover{
+  background:var(--md-surface-2);
+}
+.sb-user:focus-visible{
+  outline:2px solid var(--md-primary);
+  outline-offset:2px;
 }
 .sb-avatar{
   width:48px; height:48px;
