@@ -436,6 +436,8 @@
                 const item = items.find(i => i.country === code);
                 if(item){
                   toast(esc(item.name) + ' (' + esc(item.country) + ') থেকে ' + item.count + ' টি ভিজিট • ' + item.pct + '%');
+                } else {
+                  console.warn("onRegionClick: item not found for", code);
                 }
               },
               series: {
