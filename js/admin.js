@@ -484,7 +484,7 @@
       const [vx, vy, vw, vh] = vBox.split(/\s+/).map(Number);
       const rw = wrap.clientWidth, rh = wrap.clientHeight;
       dataItems.forEach(d => {
-        const code = d.country.toLowerCase();
+        const code = d.country.toUpperCase();
         const path = svg.querySelector('path[data-code="' + code + '"]') ||
                      svg.querySelector('[data-code="' + code + '"]');
         if(!path) return;
