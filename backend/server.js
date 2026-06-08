@@ -7,6 +7,7 @@
 import express from "express";
 import multer from "multer";
 import path from "path";
+import bcrypt from "bcryptjs";
 import { fileURLToPath } from "url";
 import db, { ready } from "./db.js";
 
@@ -212,6 +213,73 @@ app.delete("/api/news/:id", requireAuth, async (req, res) => {
     if (!existing) return res.status(404).json({ error: "News not found" });
     await db.prepare("DELETE FROM news WHERE id = ?").run(req.params.id);
     res.json({ ok: true, id: Number(req.params.id) });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* ===== Admin Profile API ===== */
+app.get("/api/admin/profile", requireAuth, async (req, res) => {
+  await ready();
+  try {
+    const user = process.env.ADMIN_USER || "admin";
+    const pass = process.env.ADMIN_PASS || "1234";
+    const row = await db.prepare(
+      "SELECT id, username, display_name, role, email, phone, created_at, last_login, updated_at FROM admins WHERE username = ?"
+    ).get(user);
+    if (!row) {
+      return res.json({
+        id: 0, username: user, display_name: "Editor", role: "admin",
+        created_at: null, last_login: null, source: "env"
+      });
+    }
+    res.json({ ...row, source: "db" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put("/api/admin/profile", requireAuth, async (req, res) => {
+  await ready();
+  try {
+    const { username, display_name, email, phone, current_password, new_password } = req.body || {};
+    const user = process.env.ADMIN_USER || "admin";
+    const pass = process.env.ADMIN_PASS || "1234";
+
+    if (!username) return res.status(400).json({ error: "Username দিতে হবে" });
+
+    let cur = await db.prepare("SELECT id, username, password, display_name FROM admins WHERE username = ?").get(user);
+    if (!cur) {
+      const hash = await bcrypt.hash(pass, 10);
+      await db.prepare(
+        "INSERT INTO admins (username, password, display_name, role) VALUES (?, ?, ?, ?)"
+      ).run(user, hash, "Editor", "admin");
+      cur = await db.prepare("SELECT id, username, password, display_name FROM admins WHERE username = ?").get(user);
+    }
+
+    if (new_password) {
+      if (!current_password) return res.status(400).json({ error: "বর্তমান পাসওয়ার্ড দিতে হবে" });
+      const ok = await bcrypt.compare(current_password, cur.password);
+      if (!ok) return res.status(401).json({ error: "বর্তমান পাসওয়ার্ড ভুল" });
+      if (new_password.length < 4) return res.status(400).json({ error: "নতুন পাসওয়ার্ড কমপক্ষে ৪ অক্ষর হতে হবে" });
+      const newHash = await bcrypt.hash(new_password, 10);
+      await db.prepare(
+        "UPDATE admins SET username = ?, display_name = ?, email = ?, phone = ?, password = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
+      ).run(username, display_name || "", email || "", phone || "", newHash, cur.id);
+    } else {
+      await db.prepare(
+        "UPDATE admins SET username = ?, display_name = ?, email = ?, phone = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
+      ).run(username, display_name || "", email || "", phone || "", cur.id);
+    }
+
+    const updated = await db.prepare(
+      "SELECT id, username, display_name, role, email, phone, created_at, last_login, updated_at FROM admins WHERE id = ?"
+    ).get(cur.id);
+    res.json({ ...updated, source: "db" });
+
+    if (username !== user) {
+      console.log(`[admin] username changed from "${user}" to "${username}" — restart to pick up new env override`);
+    }
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

@@ -70,6 +70,36 @@ let schemaReady = (async () => {
       await db.prepare("INSERT OR IGNORE INTO categories (name) VALUES (?)").run(r.category);
     }
   }
+
+  /* ===== Admin profile table ===== */
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS admins (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      username     TEXT    UNIQUE NOT NULL,
+      password     TEXT    NOT NULL,
+      display_name TEXT,
+      role         TEXT    DEFAULT 'admin',
+      email        TEXT,
+      phone        TEXT,
+      last_login   DATETIME,
+      created_at   DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at   DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  try { await db.exec("ALTER TABLE admins ADD COLUMN email TEXT"); } catch {}
+  try { await db.exec("ALTER TABLE admins ADD COLUMN phone TEXT"); } catch {}
+  /* seed default admin if none exists */
+  const adminCount = await db.prepare("SELECT COUNT(*) AS c FROM admins").get();
+  if ((adminCount?.c || 0) === 0) {
+    const { default: bcrypt } = await import("bcryptjs");
+    const seedUser = process.env.ADMIN_USER || "admin";
+    const seedPass = process.env.ADMIN_PASS || "1234";
+    const seedHash = await bcrypt.hash(seedPass, 10);
+    const seedName = process.env.ADMIN_DISPLAY_NAME || "Editor";
+    await db.prepare(
+      "INSERT INTO admins (username, password, display_name, role) VALUES (?, ?, ?, ?)"
+    ).run(seedUser, seedHash, seedName, "admin");
+  }
 })();
 
 /* Block until schema is ready (call before any DB operation) */
