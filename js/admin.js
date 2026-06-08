@@ -381,11 +381,20 @@
       .then(r => r.ok ? r.json() : Promise.reject(new Error("HTTP " + r.status)))
       .then(data => {
         const items = data.list || [];
+        el.innerHTML = '';
         if (items.length === 0) {
           el.innerHTML = '<p class="empty-state">এই সময়ে লোকেশন ডাটা নেই</p>';
           return;
         }
-        el.innerHTML = '<div class="traffic-grid">' + items.map(s =>
+        const mapEl = document.createElement("div");
+        mapEl.id = "locationsMap";
+        mapEl.style.height = "300px";
+        mapEl.style.marginBottom = "16px";
+        el.appendChild(mapEl);
+
+        const listEl = document.createElement("div");
+        listEl.id = "locationsList";
+        listEl.innerHTML = '<div class="traffic-grid">' + items.map(s =>
           '<div class="traffic-item">' +
             '<div class="traffic-head">' +
               '<span class="traffic-dot" style="background:#6750a4"></span>' +
@@ -397,6 +406,38 @@
           '</div>'
         ).join("") + '</div>' +
         '<div style="margin-top:12px;font-size:12px;color:var(--md-on-surface-var);text-align:center;">মোট ' + data.total + ' টি ভিজিট · ' + esc(rangeLabel(range)) + '</div>';
+        el.appendChild(listEl);
+
+        const codes = {};
+        const maxVal = Math.max(...items.map(i => i.count), 1);
+        items.forEach(i => { codes[i.country.toLowerCase()] = i.count; });
+        try {
+          new jsVectorMap({
+            selector: "#locationsMap",
+            map: "world",
+            zoomOnScroll: false,
+            zoomButtons: false,
+            regionStyle: {
+              initial: { fill: "#e0e0e0", stroke: "#fff", "stroke-width": .5 },
+              hover: { fill: "#b39ddb" }
+            },
+            labels: {
+              regions: { render(code){ return code; } }
+            },
+            series: {
+              regions: [{
+                values: codes,
+                min: 0,
+                max: maxVal,
+                minOpacity: .3,
+                maxOpacity: .9,
+                scale: ["#e8def8", "#6750a4"]
+              }]
+            }
+          });
+        } catch(e){
+          console.warn("Map render failed:", e);
+        }
       })
       .catch(err => {
         el.innerHTML = '<p class="empty-state">লোড ব্যর্থ: ' + esc(err.message) + '</p>';

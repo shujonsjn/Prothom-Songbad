@@ -16,6 +16,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jsvectormap/dist/css/jsvectormap.css">
 <link rel="stylesheet" href="css/admin.css">
 
 <style>
@@ -229,7 +230,11 @@
           </div>
           <div class="card dash-card">
             <h3><span class="md-icon"><span class="ms">public</span></span>Visitor Locations</h3>
-            <div id="visitorLocations"><p class="empty-state">Loading…</p></div>
+            <div id="visitorLocations" style="position:relative;">
+              <div id="locationsMap" style="height:300px;margin-bottom:16px;"></div>
+              <div id="locationsList"></div>
+              <p class="empty-state">Loading…</p>
+            </div>
           </div>
         </div>
 
@@ -637,6 +642,8 @@
 
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/jsvectormap/dist/js/jsvectormap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsvectormap/dist/maps/world.js"></script>
 <script src="js/admin.js"></script>
 
 </body>
