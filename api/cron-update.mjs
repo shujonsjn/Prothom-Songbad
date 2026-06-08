@@ -1,6 +1,6 @@
 // api/cron-update.mjs — Vercel / External Cron Job
-// প্রতি ১০ মিনিটে Prothom Alo এর মূল RSS feed থেকে সব category-র খবর scrape করে
-// প্রতি category থেকে ২-৩টি নতুন খবর summarize করে Turso DB-তে যোগ করে।
+// প্রতি ১০ মিনিটে Prothom Alo এর মূল RSS feed থেকে সব খবর scrape করে
+// summarize করে Turso DB-তে যোগ করে (per-category limit নেই)।
 // Schedule: */10 * * * * (GitHub Actions) বা cron-job.org
 // Auth: ?secret=CRON_SECRET  বা  Authorization: Bearer CRON_SECRET
 
@@ -8,7 +8,7 @@ import { createClient } from "@libsql/client";
 
 const FEED_URL    = "https://www.prothomalo.com/feed/";
 const MAX_SUMMARY_CHARS = 2000;
-const PER_CATEGORY_LIMIT = 2;
+// no per-category limit — all items from feed are processed
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
 /* ===== Turso / DB ===== */
@@ -276,7 +276,6 @@ function groupItemsByCategory(xml) {
     const cat = pickCategoryFromUrl(link);
     if (!cat) continue;
     if (!grouped[cat]) grouped[cat] = [];
-    if (grouped[cat].length >= PER_CATEGORY_LIMIT) continue;
     grouped[cat].push({
       title:    pickTag(block, "title") || "",
       link,
