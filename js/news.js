@@ -23,7 +23,6 @@
       currentArticle = n;
       document.title = (n.title || "সংবাদ") + " — প্রথম সংবাদ";
       paintArticle(n);
-      initCarousel();
       renderVideo(n.video);
       setShareLinks(n);
       loadRelated(n);
@@ -53,18 +52,13 @@
       $("dek").textContent = "";
     }
 
-    /* image + gallery carousel */
-    const slot = $("mediaSlot");
+    /* image — single hero image */
     const img = $("img");
     let gallery = [];
     if(n.gallery){
       try { gallery = JSON.parse(n.gallery); } catch {}
     }
-    if(n.image && gallery.length > 0){
-      const allImages = [n.image, ...gallery.filter(Boolean)];
-      slot.innerHTML = buildCarousel(allImages, n.title || "") +
-        '<div id="videoWrap" class="video-wrap" hidden><div id="videoContainer"></div></div>';
-    } else if(n.image){
+    if(n.image){
       img.src = n.image;
       img.alt = n.title || "";
     } else {
@@ -79,8 +73,8 @@
     $("time").textContent   = "প্রকাশ: " + (n.time || "আজ");
     $("readTime").textContent = estimateReadTime(body) + " মিনিটে পড়া যাবে";
 
-    /* body — paragraphs, pull quote, drop cap */
-    $("detailsWrap").innerHTML = buildBodyHtml(body);
+    /* body — paragraphs with inline gallery images */
+    $("detailsWrap").innerHTML = buildBodyHtml(body, gallery);
 
     /* tags from category + subcategory + extracted keywords */
     $("tagRow").innerHTML = buildTags(n);
@@ -95,9 +89,8 @@
     meta.setAttribute('content', (n.title || "") + " — প্রথম সংবাদ");
   }
 
-  /* build the body HTML — drop cap on first paragraph, pull quote on 2nd long sentence,
-     rest split into <p> by sentence boundaries */
-  function buildBodyHtml(text){
+  /* build the body HTML — paragraphs with inline gallery images interspersed */
+  function buildBodyHtml(text, gallery){
     if(!text || !text.trim()){
       return '<p class="article-empty">বিস্তারিত পঠ্যক্ষণ চলছে…</p>';
     }
@@ -125,14 +118,19 @@
       }
     }
 
-    /* remaining sentences grouped into paragraphs of 2-3 */
+    /* remaining sentences grouped into paragraphs of 2-3, with inline gallery images */
     const rest = sentences.slice(firstCount);
-    let buf = [];
+    const buf = [];
+    let imgIdx = 0;
     for(let i = 0; i < rest.length; i++){
       buf.push(rest[i]);
       if(buf.length >= 2 || i === rest.length - 1){
         parts.push(`<p>${escHtml(buf.join(" "))}</p>`);
-        buf = [];
+        buf.length = 0;
+        /* insert a gallery image every 3 paragraphs */
+        if(gallery && imgIdx < gallery.length && parts.length % 3 === 0){
+          parts.push(`<div class="inline-gallery-img"><img src="${escAttr(gallery[imgIdx++])}" alt="" loading="lazy"></div>`);
+        }
       }
     }
     return parts.join("\n");
@@ -163,63 +161,6 @@
     const words = (text || "").trim().split(/\s+/).length;
     const mins = Math.max(1, Math.round(words / 180));
     return mins;
-  }
-
-  /* ----- image gallery carousel ----- */
-  function buildCarousel(images, alt){
-    const slides = images.map((url, i) =>
-      `<div class="carousel-slide${i === 0 ? " active" : ""}">
-        <img src="${escAttr(url)}" alt="${escAttr(alt)}" loading="${i === 0 ? "eager" : "lazy"}">
-      </div>`
-    ).join("");
-    const dots = images.map((_, i) =>
-      `<span class="carousel-dot${i === 0 ? " active" : ""}" data-index="${i}"></span>`
-    ).join("");
-    return `<div class="carousel" id="imgCarousel">
-      <div class="carousel-track">${slides}</div>
-      <button class="carousel-btn carousel-prev" aria-label="Previous">‹</button>
-      <button class="carousel-btn carousel-next" aria-label="Next">›</button>
-      <div class="carousel-dots">${dots}</div>
-    </div>`;
-  }
-
-  function initCarousel(){
-    const carousel = document.getElementById("imgCarousel");
-    if(!carousel) return;
-    const track = carousel.querySelector(".carousel-track");
-    const slides = track.querySelectorAll(".carousel-slide");
-    const dots = carousel.querySelectorAll(".carousel-dot");
-    const prev = carousel.querySelector(".carousel-prev");
-    const next = carousel.querySelector(".carousel-next");
-    let current = 0;
-    let interval;
-
-    function goTo(index){
-      slides.forEach(s => s.classList.remove("active"));
-      dots.forEach(d => d.classList.remove("active"));
-      slides[index].classList.add("active");
-      dots[index].classList.add("active");
-      current = index;
-    }
-
-    function nextSlide(){ goTo((current + 1) % slides.length); }
-    function prevSlide(){ goTo((current - 1 + slides.length) % slides.length); }
-
-    prev.addEventListener("click", () => { prevSlide(); resetInterval(); });
-    next.addEventListener("click", () => { nextSlide(); resetInterval(); });
-
-    dots.forEach(d => {
-      d.addEventListener("click", () => {
-        goTo(Number(d.dataset.index));
-        resetInterval();
-      });
-    });
-
-    carousel.addEventListener("mouseenter", () => clearInterval(interval));
-    carousel.addEventListener("mouseleave", () => { interval = setInterval(nextSlide, 5000); });
-    interval = setInterval(nextSlide, 5000);
-
-    function resetInterval(){ clearInterval(interval); interval = setInterval(nextSlide, 5000); }
   }
 
   /* ----- share links ----- */
