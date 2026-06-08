@@ -36,13 +36,41 @@
   const addSubInline = document.getElementById("addSubInline");
 
   function authHeader(){
-    return { "Authorization": "Basic " + btoa(credentials.u + ":" + credentials.p) };
+    const h = "Basic " + btoa(credentials.u + ":" + credentials.p);
+    return { "Authorization": h };
   }
+
+  /* expose auth to other pages (e.g. news.html comment delete) */
+  (function syncAdminAuth(){
+    if(localStorage.getItem("adminAuth")){
+      /* already synced – check if still in admin session */
+      if(!credentials) localStorage.removeItem("adminAuth");
+    }
+  })();
 
   function esc(s){
     return String(s == null ? "" : s).replace(/[&<>"']/g, c => (
       {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]
     ));
+  }
+  function timeAgo(iso){
+    if(!iso) return "";
+    const isoNorm = iso.replace(" ", "T") + "Z";
+    const d = new Date(isoNorm);
+    if(isNaN(d.getTime())) return "";
+    const now = new Date();
+    let diffSec = Math.floor((now - d) / 1000);
+    if(diffSec < 0) diffSec = 0;
+    if(diffSec < 60)        return diffSec + " সেকেন্ড আগে";
+    const diffMin = Math.floor(diffSec / 60);
+    if(diffMin < 60)        return diffMin + " মিনিট আগে";
+    const diffHr  = Math.floor(diffMin / 60);
+    if(diffHr  < 24)        return diffHr + " ঘণ্টা আগে";
+    const diffDay = Math.floor(diffHr / 24);
+    if(diffDay < 30)        return diffDay + " দিন আগে";
+    const diffMon = Math.floor(diffDay / 30);
+    if(diffMon < 12)        return diffMon + " মাস আগে";
+    return Math.floor(diffMon/12) + " বছর আগে";
   }
 
   /* ===== LOGIN ===== */
@@ -60,6 +88,21 @@
         return r.json();
       })
       .then(() => {
+        localStorage.setItem("adminAuth", authHeader()["Authorization"]);
+        /* set sub_session immediately for admin (email will be refined by sync-subscriber) */
+        const adminName = credentials.u === "admin" ? "Admin" : credentials.u;
+        const adminEmail = credentials.u + "@admin.prothom-songbad.com";
+        localStorage.setItem("sub_session", JSON.stringify({ email: adminEmail, name: adminName, phone: "", is_admin: true, active: 1 }));
+        /* auto-create subscriber profile for admin (async — refines sub_session) */
+        fetch("/api/admin/sync-subscriber", { headers: authHeader() })
+          .then(r => r.ok ? r.json() : null)
+          .then(j => {
+            if(j && j.subscriber){
+              const s = j.subscriber;
+              localStorage.setItem("sub_session", JSON.stringify({ email:s.email, name:s.name, phone:s.phone || "", is_admin:true, active:s.active }));
+            }
+          })
+          .catch(() => {});
         loginBox.style.display = "none";
         admin.style.display    = "block";
         load();
@@ -102,6 +145,7 @@
   /* ===== LOGOUT ===== */
   window.logout = function(){
     credentials = null;
+    localStorage.removeItem("adminAuth");
     editId = null;
     clear();
     admin.style.display    = "none";
@@ -1537,6 +1581,221 @@
       e.preventDefault();
       showSection("banners");
       loadBanners();
+    });
+  });
+
+  /* ============================================================
+     SUBSCRIBERS
+     ============================================================ */
+  window.exportSubscribers = function(){
+    fetch("/api/subscribers/export", { headers: authHeader() })
+      .then(r => {
+        if(!r.ok) throw new Error("HTTP " + r.status);
+        return r.text();
+      })
+      .then(csv => {
+        const bom = "\uFEFF";
+        const blob = new Blob([bom + csv], { type: "text/csv;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "subscribers_" + new Date().toISOString().slice(0,10) + ".csv";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        toast("✅ Download started");
+      })
+      .catch(err => toast("❌ Export failed: " + err.message, "error"));
+  };
+
+  window.loadSubscribers = async function(){
+    const tbody = document.getElementById("subscribersList");
+    const cntLabel = document.getElementById("subCountLabel");
+    if(!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="4" class="inbox-empty">লোড হচ্ছে...</td></tr>';
+    try {
+      const r = await fetch("/api/subscribers", { headers: authHeader() });
+      const j = await r.json();
+      if(!r.ok) throw new Error(j.error || "HTTP " + r.status);
+      const subs = j.subscribers || [];
+      const cnt = document.getElementById("cntSubscribers");
+      if(cnt) cnt.textContent = String(subs.length);
+      if(cntLabel) cntLabel.textContent = "মোট " + subs.length + " জন সাবস্ক্রাইবার";
+      if(subs.length === 0){
+        tbody.innerHTML = '<tr><td colspan="4" class="inbox-empty">কোনো সাবস্ক্রাইবার নেই।</td></tr>';
+        return;
+      }
+      tbody.innerHTML = subs.map((s) => {
+        const phone = s.phone ? esc(s.phone) : '<span style="opacity:.4;">—</span>';
+        const email = s.email ? esc(s.email) : '<span style="opacity:.4;">—</span>';
+        const addr = s.address ? esc(s.address) : '<span style="opacity:.4;">—</span>';
+        return `<tr>
+          <td><strong>${esc(s.name || "(no name)")}</strong></td>
+          <td>${phone}</td>
+          <td>${email}</td>
+          <td>${addr}</td>
+        </tr>`;
+      }).join("");
+    } catch (err) {
+      console.error("subscribers load:", err);
+      tbody.innerHTML = '<tr><td colspan="7" class="inbox-empty">লোড ব্যর্থ: ' + esc(err.message) + '</td></tr>';
+    }
+  };
+
+  /* Load subscribers when section is opened */
+  document.querySelectorAll('.sb-link[data-section="subscribers"]').forEach(a => {
+    a.addEventListener("click", (e) => {
+      e.preventDefault();
+      showSection("subscribers");
+      loadSubscribers();
+    });
+  });
+
+  /* ============================================================
+     NOTIFICATIONS
+     ============================================================ */
+  let _notificationsCache = [];
+
+  window.loadNotifications = async function(){
+    const list = document.getElementById("notifList");
+    if(!list) return;
+    list.innerHTML = '<div class="inbox-empty">লোড হচ্ছে...</div>';
+    try {
+      const r = await fetch("/api/notifications", { headers: authHeader() });
+      const j = await r.json();
+      if(!r.ok) throw new Error(j.error || "HTTP " + r.status);
+      _notificationsCache = j.notifications || [];
+      const cnt = document.getElementById("cntNotif");
+      if(cnt) cnt.textContent = String(_notificationsCache.length);
+      if(_notificationsCache.length === 0){
+        list.innerHTML = '<div class="inbox-empty">কোনো নোটিফিকেশন নেই।</div>';
+        return;
+      }
+      list.innerHTML = _notificationsCache.map(n => {
+        const sentBadge = n.sent
+          ? '<span class="notif-badge sent"><span class="ms">check_circle</span> Sent (' + (n.recipient_count || 0) + ' recipients)</span>'
+          : '<span class="notif-badge pending"><span class="ms">schedule</span> Pending</span>';
+        const catLabel = n.category ? '<span class="notif-cat">' + esc(n.category) + '</span>' : '<span class="notif-cat" style="opacity:.6;">All categories</span>';
+        return '<div class="notif-item">' +
+          '<div class="notif-head">' +
+            '<div class="notif-title">' + esc(n.title) + '</div>' +
+            '<div class="notif-actions">' +
+              (n.sent ? '' : '<button class="notif-btn-send" onclick="sendNotification(' + n.id + ')" title="Send now"><span class="ms">send</span></button>') +
+              '<button class="notif-btn-del" onclick="deleteNotification(' + n.id + ')" title="Delete"><span class="ms">delete</span></button>' +
+            '</div>' +
+          '</div>' +
+          '<div class="notif-message">' + esc(n.message) + '</div>' +
+          '<div class="notif-meta">' +
+            catLabel +
+            '<span class="notif-date">' + esc(timeAgo(n.created_at)) + '</span>' +
+            sentBadge +
+          '</div>' +
+          (n.scheduled_at ? '<div class="notif-sched">Scheduled: ' + esc(n.scheduled_at.replace("T"," ").slice(0,16)) + '</div>' : '') +
+        '</div>';
+      }).join("");
+    } catch (err) {
+      console.error("notifications load:", err);
+      list.innerHTML = '<div class="inbox-empty">লোড ব্যর্থ: ' + esc(err.message) + '</div>';
+    }
+  };
+
+  window.showNewNotifForm = function(){
+    const form = document.getElementById("notifForm");
+    if(!form) return;
+    form.style.display = "block";
+    document.getElementById("nfTitle").value = "";
+    document.getElementById("nfMessage").value = "";
+    document.getElementById("nfCategory").value = "";
+    document.getElementById("nfScheduled").value = "";
+    document.getElementById("nfMsg").style.display = "none";
+    /* populate category dropdown from existing categories */
+    const sel = document.getElementById("nfCategory");
+    if(sel){
+      fetch("/api/categories").then(r => r.ok ? r.json() : []).then(cats => {
+        sel.innerHTML = '<option value="">সব ক্যাটাগরি</option>' +
+          (cats || []).map(c => '<option value="' + esc(c.name || c.category) + '">' + esc(c.name || c.category) + '</option>').join("");
+      }).catch(() => {});
+    }
+  };
+
+  window.hideNotifForm = function(){
+    const form = document.getElementById("notifForm");
+    if(form) form.style.display = "none";
+  };
+
+  window.saveNotification = function(){
+    const title = document.getElementById("nfTitle");
+    const msg = document.getElementById("nfMessage");
+    const cat = document.getElementById("nfCategory");
+    const sched = document.getElementById("nfScheduled");
+    const nfMsg = document.getElementById("nfMsg");
+    if(!title || !msg || !nfMsg) return;
+    if(!title.value.trim()){ nfMsg.textContent = "Title দিতে হবে"; nfMsg.style.display="block"; return; }
+    if(!msg.value.trim()){ nfMsg.textContent = "Message লিখুন"; nfMsg.style.display="block"; return; }
+    nfMsg.style.display = "none";
+    fetch("/api/notifications", {
+      method: "POST",
+      headers: { ...authHeader(), "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: title.value.trim(),
+        message: msg.value.trim(),
+        category: cat ? cat.value : "",
+        scheduled_at: sched && sched.value ? sched.value : null
+      })
+    }).then(r => r.json()).then(j => {
+      if(j.ok){
+        toast("Notification saved ✓");
+        hideNotifForm();
+        loadNotifications();
+      } else {
+        nfMsg.textContent = "❌ " + (j.error || "Failed");
+        nfMsg.style.display = "block";
+      }
+    }).catch(err => {
+      nfMsg.textContent = "❌ " + err.message;
+      nfMsg.style.display = "block";
+    });
+  };
+
+  window.sendNotification = async function(id){
+    if(!confirm("Send this notification to all active subscribers?")) return;
+    try {
+      const r = await fetch("/api/notifications/" + id + "/send", {
+        method: "POST",
+        headers: authHeader()
+      });
+      const j = await r.json();
+      if(!r.ok) throw new Error(j.error || "HTTP " + r.status);
+      toast("✅ Sent to " + j.recipientCount + " subscribers");
+      loadNotifications();
+    } catch (err) {
+      toast("Send failed: " + err.message, "error");
+    }
+  };
+
+  window.deleteNotification = async function(id){
+    if(!confirm("Delete this notification?")) return;
+    try {
+      const r = await fetch("/api/notifications/" + id, {
+        method: "DELETE",
+        headers: authHeader()
+      });
+      const j = await r.json();
+      if(!r.ok) throw new Error(j.error || "HTTP " + r.status);
+      toast("Deleted ✓");
+      loadNotifications();
+    } catch (err) {
+      toast("Delete failed: " + err.message, "error");
+    }
+  };
+
+  /* Load notifications when section is opened */
+  document.querySelectorAll('.sb-link[data-section="notifications"]').forEach(a => {
+    a.addEventListener("click", (e) => {
+      e.preventDefault();
+      showSection("notifications");
+      loadNotifications();
     });
   });
 

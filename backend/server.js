@@ -217,6 +217,37 @@ app.delete("/api/news/:id", requireAuth, async (req, res) => {
   }
 });
 
+/* ===== Subscribers API ===== */
+app.get("/api/subscribers", requireAuth, async (req, res) => {
+  await ready();
+  try {
+    const rows = await db.prepare(
+      "SELECT * FROM subscribers ORDER BY created_at DESC"
+    ).all();
+    res.json({ subscribers: rows });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get("/api/subscribers/export", requireAuth, async (req, res, next) => {
+  try {
+    const rows = await db.prepare(
+      "SELECT * FROM subscribers ORDER BY created_at DESC"
+    ).all();
+    /* CSV export */
+    const header = "Name,Phone,Email,Address,Source,Active,Created\n";
+    const csv = header + rows.map(r =>
+      `"${(r.name||"").replace(/"/g,'""')}","${(r.phone||"").replace(/"/g,'""')}","${(r.email||"").replace(/"/g,'""')}","${(r.address||"").replace(/"/g,'""')}","${(r.source||"").replace(/"/g,'""')}",${r.active ?? 1},"${r.created_at||""}"`
+    ).join("\n");
+    res.set("Content-Type", "text/csv; charset=utf-8");
+    res.set("Content-Disposition", "attachment; filename=subscribers.csv");
+    res.send(csv);
+  } catch (err) {
+    next(err);
+  }
+});
+
 /* ===== Error handler ===== */
 app.use((err, req, res, next) => {
   console.error(err);
