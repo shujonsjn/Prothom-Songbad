@@ -426,13 +426,14 @@
                 initial: { fill: "#e0e0e0", stroke: "#fff", "stroke-width": .5 },
                 hover: { fill: "#b39ddb" }
               },
-              onRegionTooltip(evt, code){
+              onRegionTooltipShow(evt, tooltip, code){
                 const item = items.find(i => i.country.toLowerCase() === code);
                 if(item){
-                  return '<div style="font-size:13px;font-weight:500;padding:4px 0;">' + esc(item.name) + ' <span style="opacity:.7;font-size:11px;">(' + esc(item.country) + ')</span></div>' +
-                    '<div style="font-size:15px;font-weight:700;color:#6750a4;margin-top:2px;">' + item.count + ' টি ভিজিট <span style="font-weight:400;font-size:12px;color:#888;">(' + item.pct + '%)</span></div>';
+                  tooltip.text('<div style="font-size:13px;font-weight:500;padding:4px 0;">' + esc(item.name) + ' <span style="opacity:.7;font-size:11px;">(' + esc(item.country) + ')</span></div>' +
+                    '<div style="font-size:15px;font-weight:700;color:#6750a4;margin-top:2px;">' + item.count + ' টি ভিজিট <span style="font-weight:400;font-size:12px;color:#888;">(' + item.pct + '%)</span></div>', true);
+                } else {
+                  tooltip.text(code.toUpperCase(), true);
                 }
-                return '<div style="font-size:12px;padding:4px 0;color:#888;">' + code.toUpperCase() + '</div>';
               },
               onRegionClick(evt, code){
                 const item = items.find(i => i.country.toLowerCase() === code);
