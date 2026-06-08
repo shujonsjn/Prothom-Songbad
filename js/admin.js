@@ -338,8 +338,9 @@
             }).join("");
           }
         }
-        /* traffic sources */
+        /* traffic sources + locations */
         loadTrafficSources(_dashRange);
+        loadVisitorLocations(_dashRange);
       })
       .catch(err => console.error("Dashboard load failed:", err));
   }
@@ -364,6 +365,35 @@
               '<span class="traffic-pct">' + s.pct + '%</span>' +
             '</div>' +
             '<div class="traffic-bar"><div class="traffic-bar-fill" style="width:' + s.pct + '%;background:' + esc(s.color) + '"></div></div>' +
+          '</div>'
+        ).join("") + '</div>' +
+        '<div style="margin-top:12px;font-size:12px;color:var(--md-on-surface-var);text-align:center;">মোট ' + data.total + ' টি ভিজিট · ' + esc(rangeLabel(range)) + '</div>';
+      })
+      .catch(err => {
+        el.innerHTML = '<p class="empty-state">লোড ব্যর্থ: ' + esc(err.message) + '</p>';
+      });
+  }
+
+  function loadVisitorLocations(range){
+    const el = document.getElementById("visitorLocations");
+    if (!el) return;
+    fetch("/api/analytics/countries?range=" + encodeURIComponent(range), { headers: authHeader() })
+      .then(r => r.ok ? r.json() : Promise.reject(new Error("HTTP " + r.status)))
+      .then(data => {
+        const items = data.list || [];
+        if (items.length === 0) {
+          el.innerHTML = '<p class="empty-state">এই সময়ে লোকেশন ডাটা নেই</p>';
+          return;
+        }
+        el.innerHTML = '<div class="traffic-grid">' + items.map(s =>
+          '<div class="traffic-item">' +
+            '<div class="traffic-head">' +
+              '<span class="traffic-dot" style="background:#6750a4"></span>' +
+              '<span class="traffic-label">' + esc(s.name) + ' <span style="opacity:.5;font-size:11px;">(' + esc(s.country) + ')</span></span>' +
+              '<span class="traffic-count">' + s.count + '</span>' +
+              '<span class="traffic-pct">' + s.pct + '%</span>' +
+            '</div>' +
+            '<div class="traffic-bar"><div class="traffic-bar-fill" style="width:' + s.pct + '%;background:#6750a4"></div></div>' +
           '</div>'
         ).join("") + '</div>' +
         '<div style="margin-top:12px;font-size:12px;color:var(--md-on-surface-var);text-align:center;">মোট ' + data.total + ' টি ভিজিট · ' + esc(rangeLabel(range)) + '</div>';

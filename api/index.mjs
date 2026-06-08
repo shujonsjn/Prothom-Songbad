@@ -1204,9 +1204,19 @@ app.post("/api/track-view", async (req, res) => {
     const ref    = (req.headers.referer || "").toString().slice(0, 240) || null;
     const ua     = (req.headers["user-agent"] || "").toString().slice(0, 240) || null;
     const ip     = (req.headers["x-forwarded-for"] || req.ip || "").toString().split(",")[0].trim().slice(0, 45) || null;
-    await db.prepare(
-      "INSERT INTO page_views (news_id, path, ref, ua, ip) VALUES (?, ?, ?, ?, ?)"
-    ).run(newsId, path, ref, ua, ip);
+    const country = (req.headers["cf-ipcountry"] || "").toString().toUpperCase().slice(0, 4) || null;
+    const r = await db.prepare(
+      "INSERT INTO page_views (news_id, path, ref, ua, ip, country) VALUES (?, ?, ?, ?, ?, ?)"
+    ).run(newsId, path, ref, ua, ip, country);
+    /* if no CF header, try ip-api.com in background */
+    if (!country && ip && ip !== "::1" && ip !== "127.0.0.1" && !ip.startsWith("192.168.") && !ip.startsWith("10.")) {
+      const lastId = r.lastInsertRowid;
+      fetch(`http://ip-api.com/json/${encodeURIComponent(ip)}?fields=countryCode`).then(r2 => r2.json()).then(d => {
+        if (d && d.countryCode) {
+          db.prepare("UPDATE page_views SET country = ? WHERE id = ?").run(d.countryCode, lastId).catch(() => {});
+        }
+      }).catch(() => {});
+    }
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -1338,6 +1348,39 @@ app.get("/api/analytics/top-referrers", requireAuth, async (req, res) => {
     `).all(limit);
     const total = rows.reduce((s, r) => s + r.c, 0) || 1;
     res.json({ range, total, list: rows.map(r => ({ ref: r.ref, count: r.c, pct: Math.round((r.c / total) * 100) })) });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* Visitor countries */
+app.get("/api/analytics/countries", requireAuth, async (req, res) => {
+  try {
+    const range = (req.query.range || "7d").toString();
+    const since = rangeSince(range);
+    const rows = await db.prepare(`
+      SELECT country, COUNT(*) AS c
+      FROM page_views
+      WHERE created_at >= ${since} AND country IS NOT NULL AND country != ''
+      GROUP BY country
+      ORDER BY c DESC
+    `).all();
+    const total = rows.reduce((s, r) => s + r.c, 0) || 1;
+    const countryNames = {
+      BD:"Bangladesh", IN:"India", US:"United States", GB:"United Kingdom", CA:"Canada",
+      AU:"Australia", SA:"Saudi Arabia", AE:"UAE", MY:"Malaysia", SG:"Singapore",
+      PK:"Pakistan", NP:"Nepal", LK:"Sri Lanka", CN:"China", JP:"Japan",
+      DE:"Germany", FR:"France", IT:"Italy", NL:"Netherlands", SE:"Sweden",
+      NO:"Norway", DK:"Denmark", FI:"Finland", ES:"Spain", PT:"Portugal",
+      BR:"Brazil", ZA:"South Africa", NG:"Nigeria", KE:"Kenya", EG:"Egypt",
+      RU:"Russia", TR:"Turkey", IR:"Iran", QA:"Qatar", KW:"Kuwait",
+      OM:"Oman", BH:"Bahrain", ID:"Indonesia", PH:"Philippines", TH:"Thailand",
+      KR:"South Korea", TW:"Taiwan", HK:"Hong Kong", NZ:"New Zealand"
+    };
+    const list = rows.map(r => ({
+      country: r.country, name: countryNames[r.country] || r.country, count: r.c, pct: Math.round((r.c / total) * 100)
+    }));
+    res.json({ range, total, list });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
