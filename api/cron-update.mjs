@@ -34,7 +34,6 @@ await client.execute(`
 `).catch(() => {});
 try { await client.execute("ALTER TABLE news ADD COLUMN video TEXT"); } catch {}
 try { await client.execute("ALTER TABLE news ADD COLUMN subcategory TEXT"); } catch {}
-try { await client.execute("ALTER TABLE news ADD COLUMN gallery TEXT"); } catch {}
 
 async function all(sql, ...args) {
   const r = await client.execute({ sql, args });
@@ -73,24 +72,6 @@ function pickMeta(html, prop) {
   );
   const m = html.match(re);
   return m ? decodeHtmlEntities(m[1]) : null;
-}
-
-function pickGalleryImages(html, exclude) {
-  const urls = [];
-  const seen = new Set();
-  if (exclude) seen.add(exclude.split("?")[0]);
-  const imgRe = /<img[^>]+src=["']([^"']+)["'][^>]*>/gi;
-  let m;
-  while ((m = imgRe.exec(html)) !== null) {
-    const src = m[1];
-    const key = src.split("?")[0];
-    if (src && src.startsWith("http") && !seen.has(key)) {
-      seen.add(key);
-      urls.push(src);
-      if (urls.length >= 10) break;
-    }
-  }
-  return urls;
 }
 
 function pickArticleBody(html) {
@@ -339,12 +320,10 @@ async function fetchArticle(url) {
     const image = pickMeta(html, "og:image") || pickMeta(html, "twitter:image");
     const body  = pickArticleBody(html);
     const video = toEmbedUrl(pickVideoUrl(html));
-    const gallery = pickGalleryImages(html, image);
     if (!title) return null;
     return {
       title: title.replace(/\s*[-|]\s*Prothom Alo\s*$/i, "").trim(),
       image,
-      gallery: gallery.length > 0 ? JSON.stringify(gallery) : null,
       summary: summarize(body) || pickMeta(html, "og:description"),
       video,
       category:    pickCategoryFromUrl(url),
@@ -354,11 +333,11 @@ async function fetchArticle(url) {
   } catch { return null; }
 }
 
-async function insertNews({ title, category, image, gallery, details, video, subcategory }) {
+async function insertNews({ title, category, image, details, video, subcategory }) {
   const time = new Date().toLocaleString("en-US", { timeZone: "Asia/Dhaka" });
   const r = await run(
-    "INSERT INTO news (title, category, subcategory, details, image, gallery, video, time) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-    title, category, subcategory || null, details, image || null, gallery || null, video || null, time
+    "INSERT INTO news (title, category, subcategory, details, image, video, time) VALUES (?, ?, ?, ?, ?, ?, ?)",
+    title, category, subcategory || null, details, image || null, video || null, time
   );
   return r.lastInsertRowid;
 }
@@ -416,17 +395,15 @@ export default async function handler(req, res) {
         const needsDetails = (existing.details || "").length < 200 && it.summary;
         const needsVideo   = !existing.video && it.video;
         const needsSub     = !existing.subcategory && it.subcategory;
-        const needsGallery = !existing.gallery && it.gallery;
-        if (needsDetails || needsVideo || needsSub || needsGallery) {
+        if (needsDetails || needsVideo || needsSub) {
           const newDetails = needsDetails
             ? `${it.summary}\n\n— সারসংক্ষেপ: ${it.link}`.slice(0, 2000)
             : existing.details;
-          const newVideo   = needsVideo   ? it.video        : existing.video;
-          const newSub     = needsSub     ? it.subcategory  : existing.subcategory;
-          const newGallery = needsGallery ? it.gallery      : existing.gallery;
+          const newVideo = needsVideo ? it.video : existing.video;
+          const newSub   = needsSub   ? it.subcategory : existing.subcategory;
           await run(
-            "UPDATE news SET details = ?, video = ?, subcategory = ?, gallery = ? WHERE id = ?",
-            newDetails, newVideo, newSub, newGallery, existing.id
+            "UPDATE news SET details = ?, video = ?, subcategory = ? WHERE id = ?",
+            newDetails, newVideo, newSub, existing.id
           );
           added.push({ id: existing.id, title: it.title, category: cat, action: "updated" });
         } else {
@@ -439,7 +416,6 @@ export default async function handler(req, res) {
           title:       it.title,
           category:    cat,
           image:       it.image,
-          gallery:     it.gallery,
           details:     details.slice(0, 2000),
           video:       it.video,
           subcategory: it.subcategory

@@ -51,12 +51,10 @@ let schemaReady = (async () => {
       category    TEXT    NOT NULL,
       details     TEXT    NOT NULL,
       image       TEXT,
-      gallery     TEXT,
       time        TEXT    NOT NULL,
       created_at  DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
-  try { await db.exec("ALTER TABLE news ADD COLUMN gallery TEXT"); } catch {}
   await db.exec(`
     CREATE TABLE IF NOT EXISTS categories (
       name TEXT PRIMARY KEY

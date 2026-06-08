@@ -52,12 +52,8 @@
       $("dek").textContent = "";
     }
 
-    /* image — single hero image */
+    /* image */
     const img = $("img");
-    let gallery = [];
-    if(n.gallery){
-      try { gallery = JSON.parse(n.gallery); } catch {}
-    }
     if(n.image){
       img.src = n.image;
       img.alt = n.title || "";
@@ -73,8 +69,8 @@
     $("time").textContent   = "প্রকাশ: " + (n.time || "আজ");
     $("readTime").textContent = estimateReadTime(body) + " মিনিটে পড়া যাবে";
 
-    /* body — paragraphs with inline gallery images */
-    $("detailsWrap").innerHTML = buildBodyHtml(body, gallery);
+    /* body — paragraphs, pull quote, drop cap */
+    $("detailsWrap").innerHTML = buildBodyHtml(body);
 
     /* tags from category + subcategory + extracted keywords */
     $("tagRow").innerHTML = buildTags(n);
@@ -89,8 +85,9 @@
     meta.setAttribute('content', (n.title || "") + " — প্রথম সংবাদ");
   }
 
-  /* build the body HTML — paragraphs with inline gallery images interspersed */
-  function buildBodyHtml(text, gallery){
+  /* build the body HTML — drop cap on first paragraph, pull quote on 2nd long sentence,
+     rest split into <p> by sentence boundaries */
+  function buildBodyHtml(text){
     if(!text || !text.trim()){
       return '<p class="article-empty">বিস্তারিত পঠ্যক্ষণ চলছে…</p>';
     }
@@ -118,19 +115,14 @@
       }
     }
 
-    /* remaining sentences grouped into paragraphs of 2-3, with inline gallery images */
+    /* remaining sentences grouped into paragraphs of 2-3 */
     const rest = sentences.slice(firstCount);
-    const buf = [];
-    let imgIdx = 0;
+    let buf = [];
     for(let i = 0; i < rest.length; i++){
       buf.push(rest[i]);
       if(buf.length >= 2 || i === rest.length - 1){
         parts.push(`<p>${escHtml(buf.join(" "))}</p>`);
-        buf.length = 0;
-        /* insert a gallery image every 3 paragraphs */
-        if(gallery && imgIdx < gallery.length && parts.length % 3 === 0){
-          parts.push(`<div class="inline-gallery-img"><img src="${escAttr(gallery[imgIdx++])}" alt="" loading="lazy"></div>`);
-        }
+        buf = [];
       }
     }
     return parts.join("\n");

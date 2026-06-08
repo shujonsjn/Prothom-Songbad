@@ -1387,19 +1387,6 @@ body.news-paper{ background:#ffffff; }
   object-fit:cover;
   background:#0a0a0a;
 }
-/* inline gallery images within article body */
-.inline-gallery-img{
-  margin:28px 0;
-  border-radius:6px;
-  overflow:hidden;
-  background:#f0eadc;
-}
-.inline-gallery-img img{
-  display:block;
-  width:100%;
-  max-height:500px;
-  object-fit:cover;
-}
 .article-figure figcaption{
   font-family:'Hind Siliguri',sans-serif;
   font-size:12px;
