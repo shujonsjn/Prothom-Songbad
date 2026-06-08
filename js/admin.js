@@ -427,15 +427,10 @@
                 hover: { fill: "#b39ddb" }
               },
               onRegionTooltipShow(evt, tooltip, code){
-                try {
-                  const item = items.find(i => i.country.toLowerCase() === code);
-                  if(item){
-                    tooltip.selector.innerHTML = '<div style="font-size:13px;font-weight:500;padding:4px 0;">' + esc(item.name) + ' <span style="opacity:.7;font-size:11px;">(' + esc(item.country) + ')</span></div>' +
-                      '<div style="font-size:15px;font-weight:700;color:#6750a4;margin-top:2px;">' + item.count + ' টি ভিজিট <span style="font-weight:400;font-size:12px;color:#888;">(' + item.pct + '%)</span></div>';
-                  } else {
-                    tooltip.selector.innerHTML = code.toUpperCase();
-                  }
-                } catch(e){ console.warn("tooltip err", e); }
+                const item = items.find(i => i.country.toLowerCase() === code);
+                if(item){
+                  tooltip.text(esc(item.name) + ' (' + esc(item.country) + ')\n' + item.count + ' visits (' + item.pct + '%)');
+                }
               },
               onRegionClick(evt, code){
                 const item = items.find(i => i.country.toLowerCase() === code);
