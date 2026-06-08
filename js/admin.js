@@ -41,10 +41,25 @@
   }
 
   /* expose auth to other pages (e.g. news.html comment delete) */
-  (function syncAdminAuth(){
-    if(localStorage.getItem("adminAuth")){
-      /* already synced – check if still in admin session */
-      if(!credentials) localStorage.removeItem("adminAuth");
+  (function restoreSession(){
+    const saved = localStorage.getItem("adminAuth");
+    if(saved){
+      const decoded = atob(saved.replace(/^Basic\s+/i, ""));
+      const idx = decoded.indexOf(":");
+      credentials = { u: decoded.slice(0, idx), p: decoded.slice(idx + 1) };
+      /* verify and show admin panel */
+      fetch("/api/admin/check", { headers: authHeader() })
+        .then(r => {
+          if(r.status === 401) { credentials = null; localStorage.removeItem("adminAuth"); return; }
+          if(!r.ok) throw 0;
+          loginBox.style.display = "none";
+          admin.style.display    = "block";
+          load();
+          setTimeout(() => { try { loadDashboard(); } catch(e){ console.warn("dashboard:", e); } }, 50);
+          setTimeout(() => { try { loadProfile(); } catch(e){ console.warn("profile:", e); } }, 200);
+          setTimeout(() => { try { loadInbox(); } catch(e){ console.warn("inbox:", e); } }, 400);
+        })
+        .catch(() => { credentials = null; localStorage.removeItem("adminAuth"); });
     }
   })();
 
