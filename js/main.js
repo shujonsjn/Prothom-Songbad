@@ -313,7 +313,7 @@
           } else {
             loadMoreBtn.style.display = "block";
             const remaining = moreNews.length - showCount;
-            loadMoreBtn.textContent = `আরও ${Math.min(10, remaining)}টি দেখান`;
+            loadMoreBtn.textContent = `আরও`;
           }
         }
       }
