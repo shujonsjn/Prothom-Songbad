@@ -1,7 +1,7 @@
-name: Prothom Alo Sports News Sync
+name: Prothom Alo News Sync
 
 on:
-  # প্রতি ১০ মিনিটে: sports পেজ scrape + summarize
+  # প্রতি ১০ মিনিটে: RSS feed থেকে সব ক্যাটাগরির খবর scrape + screenshot + summarize
   schedule:
     - cron: "*/10 * * * *"
   workflow_dispatch:
@@ -9,16 +9,19 @@ on:
 jobs:
   sync:
     runs-on: ubuntu-latest
-    timeout-minutes: 3
+    timeout-minutes: 10
     steps:
-      - name: Trigger cron endpoint
-        run: |
-          URL="https://prothom-songbad.vercel.app/api/cron-update?secret=${{ secrets.CRON_SECRET }}"
-          echo "Calling $URL"
-          RESPONSE=$(curl -sS -w "\nHTTP_STATUS:%{http_code}" "$URL")
-          echo "$RESPONSE"
-          STATUS=$(echo "$RESPONSE" | tail -1 | sed 's/HTTP_STATUS://')
-          if [ "$STATUS" != "200" ]; then
-            echo "Cron endpoint returned status $STATUS"
-            exit 1
-          fi
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Sync news (RSS → screenshot → summarize → DB)
+        env:
+          TURSO_URL: ${{ secrets.TURSO_URL }}
+          TURSO_TOKEN: ${{ secrets.TURSO_TOKEN }}
+        run: node scripts/news-sync.mjs
