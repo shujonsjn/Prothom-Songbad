@@ -486,9 +486,13 @@
     return rows.map(b => {
       const link = b.link_url || "#";
       const target = /^https?:\/\//i.test(link) && !link.startsWith(location.origin) ? ' target="_blank" rel="noopener"' : '';
+      let style = '';
+      if(b.width)  style += 'width:' + Number(b.width) + 'px;';
+      if(b.height) style += 'height:' + Number(b.height) + 'px;';
+      const dimAttr = style ? ' style="' + style + '"' : '';
       return '<a class="full-banner" href="' + esc(link) + '"' + target + ' data-pos="' + esc(b.position) + '">' +
         '<span class="full-banner-label">বিজ্ঞাপন</span>' +
-        '<img src="' + esc(b.image_url) + '" alt="' + esc(b.title || "ad") + '" loading="lazy">' +
+        '<img src="' + esc(b.image_url) + '" alt="' + esc(b.title || "ad") + '" loading="lazy"' + dimAttr + '>' +
       '</a>';
     }).join("");
   }
