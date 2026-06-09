@@ -236,8 +236,9 @@
     dots.innerHTML = newsList.map((_, idx) => `
       <button class="slider-dot${idx === 0 ? " active" : ""}" data-page="${idx}" aria-label="Page ${idx+1}"></button>`).join("");
 
-    /* Active page state */
+    /* Active page state + auto-play */
     let activePage = 0;
+    let autoTimer = null;
     function goTo(p){
       activePage = p;
       track.style.transform = `translateX(-${p * 100}%)`;
@@ -245,9 +246,22 @@
         d.classList.toggle("active", i === p);
       });
     }
+    function autoNext(){
+      goTo((activePage + 1) % newsList.length);
+    }
+    function startAuto(){
+      stopAuto();
+      autoTimer = setInterval(autoNext, 5000);
+    }
+    function stopAuto(){
+      if(autoTimer){ clearInterval(autoTimer); autoTimer = null; }
+    }
     dots.querySelectorAll(".slider-dot").forEach(d => {
-      d.addEventListener("click", () => goTo(Number(d.dataset.page)));
+      d.addEventListener("click", () => { goTo(Number(d.dataset.page)); startAuto(); });
     });
+    slider.addEventListener("mouseenter", stopAuto);
+    slider.addEventListener("mouseleave", startAuto);
+    startAuto();
   }
 
   /* ===== Main news ===== */
@@ -269,7 +283,7 @@
     const heroNews = data.slice(0, 3);
     const restNews = data.slice(3);
     const latestNews = restNews.slice(0, 6);
-    const popularNews = restNews.slice(6, 9);
+    const popularNews = restNews.slice(6, 11);
     const moreNews = restNews.slice(9);
 
     let html = renderHero(heroNews);
