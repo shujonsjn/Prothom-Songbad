@@ -251,7 +251,7 @@
     }
     function startAuto(){
       stopAuto();
-      autoTimer = setInterval(autoNext, 5000);
+      autoTimer = setInterval(autoNext, 2000);
     }
     function stopAuto(){
       if(autoTimer){ clearInterval(autoTimer); autoTimer = null; }
