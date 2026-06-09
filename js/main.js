@@ -267,66 +267,37 @@
       return;
     }
 
-    /* Category title removed — sub-strip already shows the category name */
-
-    /* Hero (first 3) + grid sections (Prothom Alo style) */
+    /* Hero (first 3) — then paginated list for everything else */
     const heroNews = data.slice(0, 3);
     const restNews = data.slice(3);
-    const latestNews = restNews.slice(0, 6);
-    const popularNews = restNews.slice(6, 12);
-    const moreNews = restNews.slice(12);
-
     let html = renderHero(heroNews);
-
-    if(latestNews.length){
-      html += `<div class="section-heading"><span class="section-heading-label">সর্বশেষ</span><span class="section-heading-line"></span></div>`;
-      html += `<div class="card-grid">${latestNews.map(renderCard).join("")}</div>`;
-    }
-
-    if(popularNews.length){
-      html += `<div class="section-heading"><span class="section-heading-label">জনপ্রিয়</span><span class="section-heading-line"></span></div>`;
-      html += `<div class="card-grid">${popularNews.map(renderCard).join("")}</div>`;
-    }
-
-    if(moreNews.length){
-      html += `<div class="section-heading"><span class="section-heading-label">আরও খবর</span><span class="section-heading-line"></span></div>`;
-      html += `<div class="card-grid">${moreNews.map(renderCard).join("")}</div>`;
-    }
-
     mainNews.innerHTML = html;
 
-    /* Slider: 3 pages × 3 news (news 4-12) */
-    buildSlider(data);
-
-    /* আরও পড়ুন — only show on category page, paginated 10-at-a-time */
+    /* আরও খবর — stacked list with "আরও দেখান" button, 10 at a time */
     const readMore = document.getElementById("readMore");
     const readMoreWrap = document.getElementById("readMoreWrap");
     const loadMoreBtn = document.getElementById("loadMore");
-    if(readMore && readMoreWrap){
-      if(activeCat && activeCat !== "all" && data.length > 0){
-        readMoreWrap.style.display = "block";
-        let showCount = 10;
-        function paintReadMore(){
-          readMore.innerHTML = data.slice(0, showCount).map(renderListItem).join("");
-          if(loadMoreBtn){
-            if(showCount >= data.length){
-              loadMoreBtn.style.display = "none";
-            } else {
-              loadMoreBtn.style.display = "block";
-              const remaining = data.length - showCount;
-              loadMoreBtn.textContent = `আরও ${Math.min(10, remaining)}টি দেখান`;
-            }
+    if(readMore && readMoreWrap && restNews.length > 0){
+      readMoreWrap.style.display = "block";
+      let showCount = 10;
+      function paintReadMore(){
+        readMore.innerHTML = restNews.slice(0, showCount).map(renderListItem).join("");
+        if(loadMoreBtn){
+          if(showCount >= restNews.length){
+            loadMoreBtn.style.display = "none";
+          } else {
+            loadMoreBtn.style.display = "block";
+            const remaining = restNews.length - showCount;
+            loadMoreBtn.textContent = `আরও ${Math.min(10, remaining)}টি দেখান`;
           }
         }
-        paintReadMore();
-        if(loadMoreBtn){
-          loadMoreBtn.onclick = () => {
-            showCount = Math.min(showCount + 10, data.length);
-            paintReadMore();
-          };
-        }
-      } else {
-        readMoreWrap.style.display = "none";
+      }
+      paintReadMore();
+      if(loadMoreBtn){
+        loadMoreBtn.onclick = () => {
+          showCount = Math.min(showCount + 10, restNews.length);
+          paintReadMore();
+        };
       }
     }
   }
