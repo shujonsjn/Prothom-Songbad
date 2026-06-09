@@ -205,39 +205,35 @@
       </li>`;
   }
 
-  /* ===== NEWS SLIDER (3 pages × 3 news each) ===== */
-  function buildSlider(newsList){
-    const slider = document.getElementById("newsSlider");
-    const track  = document.getElementById("sliderTrack");
-    const dots   = document.getElementById("sliderDots");
-    if(!slider || !track || !dots) return;
-
-    const perPage = 3;
-    /* পরবর্তী ৯টা news (hero-এর পরের), যদি ৯ এর কম হয় skip */
-    const pool = newsList.slice(3, 3 + perPage * 3);
-    if(pool.length < perPage){
-      slider.style.display = "none";
+  /* ===== POPULAR SLIDER (1 news per slide, dot navigation) ===== */
+  function buildPopularSlider(newsList){
+    const slider = document.getElementById("popularSlider");
+    const track  = document.getElementById("popularTrack");
+    const dots   = document.getElementById("popularDots");
+    if(!slider || !track || !dots || newsList.length === 0){
+      if(slider) slider.style.display = "none";
       return;
     }
     slider.style.display = "block";
-    const pages = [];
-    for(let i = 0; i < pool.length; i += perPage){
-      const chunk = pool.slice(i, i + perPage);
-      if(chunk.length === perPage) pages.push(chunk);
-    }
-    if(pages.length === 0){
-      slider.style.display = "none";
-      return;
-    }
 
-    /* Slides */
-    track.innerHTML = pages.map((page, idx) => `
-      <div class="slider-slide" data-page="${idx}">
-        <div class="slider-grid">${page.map(renderCard).join("")}</div>
-      </div>`).join("");
+    /* Slides — 1 news per slide */
+    track.innerHTML = newsList.map((n, idx) => {
+      const details = (n.details || "").replace(/\s+/g, " ").trim();
+      const excerpt = details.length > 120 ? details.slice(0, 120) + "…" : details;
+      return `<div class="slider-slide" data-page="${idx}">
+        <article class="popular-card" onclick="openNews(${n.id})">
+          <img src="${esc(n.image)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.parentElement.classList.add('img-missing')">
+          <div class="popular-body">
+            <h3 class="popular-title">${esc(n.title)}</h3>
+            <p class="popular-excerpt">${esc(excerpt)}</p>
+            <div class="popular-meta">${esc(n.category || "সংবাদ")} • ${esc(timeAgo(n.created_at))}</div>
+          </div>
+        </article>
+      </div>`;
+    }).join("");
 
     /* Dots */
-    dots.innerHTML = pages.map((_, idx) => `
+    dots.innerHTML = newsList.map((_, idx) => `
       <button class="slider-dot${idx === 0 ? " active" : ""}" data-page="${idx}" aria-label="Page ${idx+1}"></button>`).join("");
 
     /* Active page state */
@@ -269,12 +265,12 @@
 
     /* Category title removed — sub-strip already shows the category name */
 
-    /* Hero (first 3) + grid sections (Prothom Alo style) */
+    /* Hero (3) + সর্বশেষ (6 grid) + জনপ্রিয় (3 slider) + আরও খবর (10/list) */
     const heroNews = data.slice(0, 3);
     const restNews = data.slice(3);
     const latestNews = restNews.slice(0, 6);
-    const popularNews = restNews.slice(6, 12);
-    const moreNews = restNews.slice(12);
+    const popularNews = restNews.slice(6, 9);
+    const moreNews = restNews.slice(9);
 
     let html = renderHero(heroNews);
 
@@ -283,50 +279,36 @@
       html += `<div class="card-grid">${latestNews.map(renderCard).join("")}</div>`;
     }
 
-    if(popularNews.length){
-      html += `<div class="section-heading"><span class="section-heading-label">জনপ্রিয়</span><span class="section-heading-line"></span></div>`;
-      html += `<div class="card-grid">${popularNews.map(renderCard).join("")}</div>`;
-    }
-
-    if(moreNews.length){
-      html += `<div class="section-heading"><span class="section-heading-label">আরও খবর</span><span class="section-heading-line"></span></div>`;
-      html += `<div class="card-grid">${moreNews.map(renderCard).join("")}</div>`;
-    }
-
     mainNews.innerHTML = html;
 
-    /* Slider: 3 pages × 3 news (news 4-12) */
-    buildSlider(data);
+    /* জনপ্রিয় — slider (3 news, 1 per slide) */
+    buildPopularSlider(popularNews);
 
-    /* আরও পড়ুন — only show on category page, paginated 10-at-a-time */
+    /* আরও খবর — stacked list, paginated 10-at-a-time */
     const readMore = document.getElementById("readMore");
     const readMoreWrap = document.getElementById("readMoreWrap");
     const loadMoreBtn = document.getElementById("loadMore");
-    if(readMore && readMoreWrap){
-      if(activeCat && activeCat !== "all" && data.length > 0){
-        readMoreWrap.style.display = "block";
-        let showCount = 10;
-        function paintReadMore(){
-          readMore.innerHTML = data.slice(0, showCount).map(renderListItem).join("");
-          if(loadMoreBtn){
-            if(showCount >= data.length){
-              loadMoreBtn.style.display = "none";
-            } else {
-              loadMoreBtn.style.display = "block";
-              const remaining = data.length - showCount;
-              loadMoreBtn.textContent = `আরও ${Math.min(10, remaining)}টি দেখান`;
-            }
+    if(readMore && readMoreWrap && moreNews.length > 0){
+      readMoreWrap.style.display = "block";
+      let showCount = 10;
+      function paintReadMore(){
+        readMore.innerHTML = moreNews.slice(0, showCount).map(renderListItem).join("");
+        if(loadMoreBtn){
+          if(showCount >= moreNews.length){
+            loadMoreBtn.style.display = "none";
+          } else {
+            loadMoreBtn.style.display = "block";
+            const remaining = moreNews.length - showCount;
+            loadMoreBtn.textContent = `আরও ${Math.min(10, remaining)}টি দেখান`;
           }
         }
-        paintReadMore();
-        if(loadMoreBtn){
-          loadMoreBtn.onclick = () => {
-            showCount = Math.min(showCount + 10, data.length);
-            paintReadMore();
-          };
-        }
-      } else {
-        readMoreWrap.style.display = "none";
+      }
+      paintReadMore();
+      if(loadMoreBtn){
+        loadMoreBtn.onclick = () => {
+          showCount = Math.min(showCount + 10, moreNews.length);
+          paintReadMore();
+        };
       }
     }
   }
