@@ -1091,17 +1091,7 @@ img{display:block;max-width:100%}
   max-width:100%;
 }
 .sidebar-banner-label{
-  position:absolute;
-  top:6px; left:6px;
-  background:rgba(0,0,0,.55);
-  color:#fff;
-  font-size:9.5px;
-  font-weight:700;
-  letter-spacing:.08em;
-  padding:2px 6px;
-  border-radius:8px;
-  text-transform:uppercase;
-  font-family:'Hind Siliguri',sans-serif;
+  display:none;
 }
 .sidebar-banner-link{
   position:absolute;
@@ -1152,17 +1142,7 @@ img{display:block;max-width:100%}
 }
 .full-banner img[style]{ max-height:none; object-fit:fill; }
 .full-banner-label{
-  position:absolute;
-  top:8px; left:8px;
-  background:rgba(0,0,0,.55);
-  color:#fff;
-  font-size:10px;
-  font-weight:700;
-  letter-spacing:.08em;
-  padding:3px 8px;
-  border-radius:8px;
-  text-transform:uppercase;
-  font-family:'Hind Siliguri',sans-serif;
+  display:none;
 }
 #headerBanners{ margin:8px 0; }
 #footerBanners{ margin:18px 0 0; }
