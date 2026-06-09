@@ -2,6 +2,7 @@
   "version": 2,
   "routes": [
     { "src": "/api/cron-update", "dest": "api/cron-update.mjs" },
+    { "src": "/api/cron-update-screenshot", "dest": "api/cron-update-screenshot.mjs" },
     { "src": "/api/(.*)", "dest": "api/index.mjs" },
     { "src": "/(.*\\..*)", "dest": "/$1" },
     { "src": "/(.*)", "dest": "/$1" }
