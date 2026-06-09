@@ -1546,6 +1546,19 @@ app.delete("/api/news/:id", requireAuth, async (req, res) => {
   }
 });
 
+app.post("/api/news/batch-delete", requireAuth, async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) return res.status(400).json({ error: "ids array required" });
+    const placeholders = ids.map(() => "?").join(",");
+    await db.prepare(`DELETE FROM news_images WHERE news_id IN (${placeholders})`).run(...ids);
+    const result = await db.prepare(`DELETE FROM news WHERE id IN (${placeholders})`).run(...ids);
+    res.json({ ok: true, deleted: result.changes });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.use((err, req, res, next) => {
   console.error(err);
   res.status(err.status || 500).json({ error: err.message || "Server error" });
