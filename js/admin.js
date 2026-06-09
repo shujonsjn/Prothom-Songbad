@@ -550,6 +550,8 @@
     if(videoEl    && videoEl.value)    form.append("video",    videoEl.value);
     if(subcatEl   && subcatEl.value)   form.append("subcategory", subcatEl.value);
     if(img.files[0]) form.append("image", img.files[0]);
+    const videoFileEl = document.getElementById("videoFile");
+    if(videoFileEl && videoFileEl.files[0]) form.append("videoFile", videoFileEl.files[0]);
     if(isEdit) form.append("keepImage", "1");
 
     const url    = isEdit ? "/api/news/" + editId : "/api/news";
@@ -1259,6 +1261,7 @@
     img.value     = "";
     const iu = document.getElementById("imageUrl");     if(iu) iu.value = "";
     const vv = document.getElementById("video");        if(vv) vv.value = "";
+    const vf = document.getElementById("videoFile");     if(vf) vf.value = "";
     if(subcat){
       renderSubcategorySelect();
     }

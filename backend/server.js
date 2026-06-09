@@ -53,10 +53,10 @@ function requireAuth(req, res, next) {
 /* ===== Multer (memory storage — works on serverless) ===== */
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 },
+  limits: { fileSize: 50 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    if (/^image\//.test(file.mimetype)) cb(null, true);
-    else cb(new Error("Only image files are allowed"));
+    if (/^image\//.test(file.mimetype) || /^video\//.test(file.mimetype)) cb(null, true);
+    else cb(new Error("Only image and video files are allowed"));
   }
 });
 
@@ -167,19 +167,24 @@ app.get("/api/admin/check", requireAuth, (req, res) => {
 });
 
 /* Create */
-app.post("/api/news", requireAuth, upload.single("image"), async (req, res) => {
+app.post("/api/news", requireAuth, upload.fields([{ name: "image", maxCount: 1 }, { name: "videoFile", maxCount: 1 }]), async (req, res) => {
   try {
     const { title, category, subcategory, details, imageUrl, video } = req.body;
     if (!title || !category || !details) {
       return res.status(400).json({ error: "title, category, details are required" });
     }
     let image = null;
-    if (req.file) {
-      image = fileToDataUrl(req.file);
+    const imgFile = req.files?.image?.[0];
+    if (imgFile) {
+      image = fileToDataUrl(imgFile);
     } else if (imageUrl && /^https?:\/\//.test(imageUrl)) {
       image = imageUrl;
     }
-    const v = (typeof video === "string" && video.trim()) ? video.trim() : null;
+    let v = (typeof video === "string" && video.trim()) ? video.trim() : null;
+    const vidFile = req.files?.videoFile?.[0];
+    if (vidFile) {
+      v = fileToDataUrl(vidFile);
+    }
     const sub = (typeof subcategory === "string" && subcategory.trim()) ? subcategory.trim() : null;
     const time = new Date().toLocaleString();
     const r = await db.prepare(
@@ -201,21 +206,27 @@ app.post("/api/news", requireAuth, upload.single("image"), async (req, res) => {
 });
 
 /* Update */
-app.put("/api/news/:id", requireAuth, upload.single("image"), async (req, res) => {
+app.put("/api/news/:id", requireAuth, upload.fields([{ name: "image", maxCount: 1 }, { name: "videoFile", maxCount: 1 }]), async (req, res) => {
   try {
     const existing = await db.prepare("SELECT * FROM news WHERE id = ?").get(req.params.id);
     if (!existing) return res.status(404).json({ error: "News not found" });
 
     const { title, category, subcategory, details, imageUrl, video, keepImage } = req.body;
     let image;
-    if (req.file) {
-      image = fileToDataUrl(req.file);
+    const imgFile = req.files?.image?.[0];
+    if (imgFile) {
+      image = fileToDataUrl(imgFile);
     } else if (typeof imageUrl === "string" && /^https?:\/\//.test(imageUrl)) {
       image = imageUrl;
     } else if (keepImage === "1" && existing.image) {
       image = existing.image;
     } else {
       image = null;
+    }
+    let v = video;
+    const vidFile = req.files?.videoFile?.[0];
+    if (vidFile) {
+      v = fileToDataUrl(vidFile);
     }
     let videoVal;
     if (typeof video === "string") {
