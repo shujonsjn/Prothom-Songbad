@@ -1,6 +1,7 @@
 name: Prothom Alo News Sync
 
 on:
+  # প্রতি ১০ মিনিটে: RSS feed থেকে সব ক্যাটাগরির খবর scrape + screenshot + summarize
   schedule:
     - cron: "*/10 * * * *"
   workflow_dispatch:
@@ -19,14 +20,8 @@ jobs:
 
       - run: npm ci
 
-      - name: Step 1 — Fetch & summarize (Vercel API)
-        run: |
-          URL="https://prothom-songbad.vercel.app/api/cron-update?secret=${{ secrets.CRON_SECRET }}"
-          echo "Calling cron-update …"
-          curl -sS -w "\nHTTP_STATUS:%{http_code}" "$URL"
-
-      - name: Step 2 — Screenshot articles (Puppeteer)
+      - name: Sync news (RSS → screenshot → summarize → DB)
         env:
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
-          API_URL: "https://prothom-songbad.vercel.app"
+          TURSO_URL: ${{ secrets.TURSO_URL }}
+          TURSO_TOKEN: ${{ secrets.TURSO_TOKEN }}
         run: node scripts/news-sync.mjs
