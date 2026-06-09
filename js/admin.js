@@ -1003,11 +1003,17 @@
     rows.forEach(n => {
       const sub = n.subcategory ? ` <span class="chip assist">${esc(n.subcategory)}</span>` : "";
       const vid = n.video ? ` <span class="chip red">▶ Video</span>` : "";
+      const img = n.image
+        ? `<div class="news-thumb"><img src="${esc(n.image)}" alt="" loading="lazy"></div>`
+        : `<div class="news-thumb news-thumb-placeholder"><span class="ms">image</span></div>`;
+      const time = n.time || n.created_at || "";
       list.innerHTML += `
         <div class="news-item" data-vid="${n.video ? 1 : 0}">
+          ${img}
           <div class="info">
             <b>${esc(n.title)}</b>
             <small>${esc(n.category)}${sub}${vid}</small>
+            <span class="news-time">${esc(time)}</span>
           </div>
           <div class="actions">
             <button class="small-btn" onclick="edit(${n.id})"><span class="ms" style="font-size:16px;">edit</span> Edit</button>

@@ -817,6 +817,34 @@ button:disabled{ opacity:.38; pointer-events:none; }
 }
 .actions{ display:flex; gap:4px; flex-shrink:0; }
 
+.news-thumb{
+  width:72px;
+  height:48px;
+  border-radius:6px;
+  overflow:hidden;
+  flex-shrink:0;
+  background:var(--md-surface-cont-high);
+}
+.news-thumb img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  display:block;
+}
+.news-thumb-placeholder{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:var(--md-outline);
+  font-size:20px;
+}
+.news-time{
+  display:block;
+  font-size:11px;
+  color:var(--md-outline);
+  margin-top:2px;
+}
+
 .small-btn{
   display:inline-flex;
   align-items:center;
