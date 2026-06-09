@@ -1009,6 +1009,7 @@
       const time = n.time || n.created_at || "";
       list.innerHTML += `
         <div class="news-item" data-vid="${n.video ? 1 : 0}">
+          <label class="news-cb-label"><input type="checkbox" class="news-cb" value="${n.id}"></label>
           ${img}
           <div class="info">
             <b>${esc(n.title)}</b>
@@ -1021,6 +1022,45 @@
           </div>
         </div>`;
     });
+    setupBatchDelete();
+  }
+
+  /* ===== BATCH DELETE ===== */
+  function setupBatchDelete(){
+    const cbs = list.querySelectorAll(".news-cb");
+    const selectAll = document.getElementById("selectAll");
+    const toolbar = document.getElementById("listToolbar");
+    const countEl = document.getElementById("selectedCount");
+    const deleteBtn = document.getElementById("deleteSelected");
+
+    function update(){
+      const checked = list.querySelectorAll(".news-cb:checked");
+      const n = checked.length;
+      toolbar.style.display = n > 0 ? "flex" : "none";
+      countEl.textContent = n + " selected";
+      selectAll.checked = n === cbs.length && cbs.length > 0;
+    }
+
+    selectAll.onchange = () => {
+      cbs.forEach(cb => cb.checked = selectAll.checked);
+      update();
+    };
+
+    cbs.forEach(cb => cb.onchange = update);
+
+    deleteBtn.onclick = () => {
+      const ids = [...list.querySelectorAll(".news-cb:checked")].map(cb => Number(cb.value));
+      if(ids.length === 0) return;
+      if(!confirm(ids.length + " টি সংবাদ মুছে ফেলতে চান?")) return;
+      fetch("/api/news/batch-delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeader() },
+        body: JSON.stringify({ ids })
+      })
+        .then(r => { if(r.status === 401){ logout(); return null; } if(!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+        .then(res => { if(res) load(); })
+        .catch(err => alert("Delete failed: " + err.message));
+    };
   }
 
   /* ===== STORIES FILTER ===== */
