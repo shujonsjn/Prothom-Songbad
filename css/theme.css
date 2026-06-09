@@ -903,6 +903,7 @@ img{display:block;max-width:100%}
   letter-spacing:.04em;
   cursor:pointer;
   transition: background .15s;
+  border-radius:8px;
 }
 .load-more:hover{ background:#c1131d; }
 
