@@ -590,7 +590,7 @@ app.delete("/api/categories/:name", requireAuth, async (req, res) => {
 });
 
 /* ===== Banners / Ads ===== */
-const ALLOWED_BANNER_POS = ["sidebar-bottom", "sidebar-top", "header", "footer", "inline"];
+const ALLOWED_BANNER_POS = ["sidebar-bottom", "sidebar-top", "header", "footer", "inline", "nav-bottom"];
 app.get("/api/banners", async (req, res) => {
   await ready();
   try {

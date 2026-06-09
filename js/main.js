@@ -371,12 +371,12 @@
 
   function loadSidebarBanners(){
     /* fetch every position separately so the home page shows them all */
-    const positions = ["sidebar-top", "sidebar-bottom", "header", "footer", "inline"];
+    const positions = ["sidebar-top", "sidebar-bottom", "header", "footer", "inline", "nav-bottom"];
     Promise.all(positions.map(pos =>
       fetch("/api/banners?position=" + pos + "&_=" + Date.now())
         .then(r => r.ok ? r.json() : [])
         .catch(() => [])
-    )).then(([topRows, bottomRows, headerRows, footerRows, inlineRows]) => {
+    )).then(([topRows, bottomRows, headerRows, footerRows, inlineRows, navRows]) => {
       /* sidebar-top: inject above "সর্বাধিক পঠিত" */
       const sidebar = document.querySelector(".sidebar");
       let topWrap = document.getElementById("sidebarBannersTop");
@@ -414,6 +414,13 @@
         const html = (inlineRows && inlineRows.length) ? renderFullBannerHtml(inlineRows) : "";
         inl2.innerHTML = html;
         inl2.style.display = html ? "" : "none";
+      }
+      /* nav-bottom: below navigation, above content */
+      const navBnr = document.getElementById("navBanner");
+      if(navBnr){
+        const html = (navRows && navRows.length) ? renderFullBannerHtml(navRows) : "";
+        navBnr.innerHTML = html;
+        navBnr.style.display = html ? "" : "none";
       }
     });
   }
