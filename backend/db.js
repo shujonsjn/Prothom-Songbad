@@ -49,12 +49,27 @@ let schemaReady = (async () => {
       id          INTEGER PRIMARY KEY AUTOINCREMENT,
       title       TEXT    NOT NULL,
       category    TEXT    NOT NULL,
+      subcategory TEXT,
       details     TEXT    NOT NULL,
       image       TEXT,
+      video       TEXT,
       time        TEXT    NOT NULL,
       created_at  DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
+  /* self-healing: add columns to news if missing */
+  try { await db.exec("ALTER TABLE news ADD COLUMN subcategory TEXT"); } catch {}
+  try { await db.exec("ALTER TABLE news ADD COLUMN video TEXT"); } catch {}
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS news_images (
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      news_id    INTEGER NOT NULL,
+      image_url  TEXT    NOT NULL,
+      caption    TEXT    DEFAULT '',
+      sort_order INTEGER DEFAULT 0
+    )
+  `);
+  try { await db.exec("CREATE INDEX IF NOT EXISTS idx_news_images_news ON news_images(news_id, sort_order)"); } catch {}
   await db.exec(`
     CREATE TABLE IF NOT EXISTS categories (
       name TEXT PRIMARY KEY
@@ -70,6 +85,18 @@ let schemaReady = (async () => {
       await db.prepare("INSERT OR IGNORE INTO categories (name) VALUES (?)").run(r.category);
     }
   }
+
+  /* Article images table (multiple images per article) */
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS news_images (
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      news_id    INTEGER NOT NULL,
+      image_url  TEXT    NOT NULL,
+      caption    TEXT    DEFAULT '',
+      sort_order INTEGER DEFAULT 0,
+      FOREIGN KEY (news_id) REFERENCES news(id) ON DELETE CASCADE
+    )
+  `);
 
   /* ===== Admin profile table ===== */
   await db.exec(`

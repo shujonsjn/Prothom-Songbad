@@ -2,6 +2,7 @@
    THEME.CSS — Modern Newspaper (monochrome)
    Shared styles for public pages: index.html & news.html
    ========================================================== */
+@import url('https://fonts.maateen.me/solaiman-lipi/font.css');
 
 /* ===== RESET ===== */
 *{
@@ -1005,14 +1006,14 @@ img{display:block;max-width:100%}
 .sidebar{
   background:#ffffff;
   padding:22px 22px 18px;
-  border:1px solid #e8e2d4;
+  border:none;
   border-radius:4px;
   height:fit-content;
   transition: box-shadow .2s, border-color .2s;
 }
 
 .sidebar:hover{
-  border-color:#c1131d;
+  border-color:transparent;
 }
 
 .sidebar h3{
@@ -1396,6 +1397,43 @@ body.news-paper{ background:#ffffff; }
   letter-spacing:0.04em;
 }
 
+/* inline figure — article images interspersed in body */
+.article-inline-figure,
+#detailsWrap figure{
+  margin:32px 0;
+  text-align:center;
+}
+.article-inline-figure img,
+#detailsWrap figure img{
+  display:block;
+  width:100%;
+  max-width:800px;
+  height:auto;
+  border-radius:4px;
+  margin:0 auto;
+}
+.article-inline-figure figcaption,
+#detailsWrap figure figcaption{
+  font-family:'Hind Siliguri',sans-serif;
+  font-size:13px;
+  font-style:italic;
+  color:#6a6a6a;
+  padding:8px 4px 0;
+  letter-spacing:0.02em;
+}
+#detailsWrap figure.figure-left{
+  float:left;margin:4px 24px 16px 0;max-width:320px;text-align:left;
+}
+#detailsWrap figure.figure-right{
+  float:right;margin:4px 0 16px 24px;max-width:320px;text-align:right;
+}
+#detailsWrap figure.figure-center{
+  text-align:center;margin-left:auto;margin-right:auto;
+}
+#detailsWrap figure.img-small img{ max-width:280px; }
+#detailsWrap figure.img-medium img{ max-width:480px; }
+#detailsWrap font{ font-family:inherit; }
+
 /* body — drop cap, pull quote, justified text */
 .article-body{
   font-family:'Noto Serif Bengali',serif;
@@ -1688,10 +1726,10 @@ body.news-paper{ background:#ffffff; }
 }
 
 /* newsletter */
-.aside-newsletter{ background:#0a0a0a; color:#f5f1e8; border-color:#0a0a0a; }
-.aside-newsletter .aside-title{ color:#f5f1e8; border-bottom-color:#c1131d; }
+.aside-newsletter{ background:#fff; color:#0a0a0a; border-color:#e8e2d4; }
+.aside-newsletter .aside-title{ color:#0a0a0a; border-bottom-color:#c1131d; }
 .aside-newsletter .aside-rule{ background:#c1131d; }
-.aside-newsletter .aside-text{ color:#cfcabb; }
+.aside-newsletter .aside-text{ color:#666; }
 .aside-cta{
   display:inline-flex;
   align-items:center;
@@ -1711,6 +1749,32 @@ body.news-paper{ background:#ffffff; }
 }
 .aside-cta:hover{ background:#fff; color:#c1131d; }
 .aside-cta svg{ display:block; }
+
+/* newsletter form inside dark card */
+.nl-form{ margin-top:4px; }
+.nl-form input{
+  display:block;
+  width:100%;
+  padding:9px 10px;
+  margin-bottom:6px;
+  border:1px solid #ddd;
+  border-radius:2px;
+  font-family:'Hind Siliguri',sans-serif;
+  font-size:13px;
+  background:#fff;
+  color:#0a0a0a;
+  box-sizing:border-box;
+}
+.nl-form input:focus{
+  outline:none;
+  border-color:#c1131d;
+}
+.nl-form .aside-cta{ margin-top:4px; }
+.nl-msg{
+  font-family:'Hind Siliguri',sans-serif;
+  font-size:12px;
+  margin-top:6px;
+}
 
 /* trending numbered list */
 .trending-list{
@@ -1976,6 +2040,26 @@ body.news-paper{ background:#ffffff; }
   height:46px;
   bottom:1px;
   right:16px;
+}
+
+/* fallback when image fails to load */
+.card-img.img-missing,
+.hero-med-img.img-missing,
+.related-thumb.img-missing,
+.rm-thumb.img-missing{
+  background:#f5f5f5 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ccc'%3E%3Cpath d='M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z'/%3E%3C/svg%3E") no-repeat center/36px;
+  min-height:100px;
+}
+.hero-big.img-missing{
+  background:#333 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23666'%3E%3Cpath d='M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z'/%3E%3C/svg%3E") no-repeat center/48px;
+  min-height:200px;
+}
+.hero-big.img-missing img,
+.card-img.img-missing img,
+.hero-med-img.img-missing img,
+.related-thumb.img-missing img,
+.rm-thumb.img-missing img{
+  display:none;
 }
 
 /* ===== Profile Modal ===== */

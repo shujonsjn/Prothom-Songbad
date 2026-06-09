@@ -56,6 +56,7 @@
     const img = $("img");
     if(n.image){
       img.src = n.image;
+      img.referrerPolicy = "no-referrer";
       img.alt = n.title || "";
     } else {
       img.removeAttribute("src");
@@ -70,7 +71,7 @@
     $("readTime").textContent = estimateReadTime(body) + " মিনিটে পড়া যাবে";
 
     /* body — paragraphs, pull quote, drop cap */
-    $("detailsWrap").innerHTML = buildBodyHtml(body);
+    $("detailsWrap").innerHTML = buildBodyHtml(body, n.article_images);
 
     /* tags from category + subcategory + extracted keywords */
     $("tagRow").innerHTML = buildTags(n);
@@ -87,7 +88,7 @@
 
   /* build the body HTML — drop cap on first paragraph, pull quote on 2nd long sentence,
      rest split into <p> by sentence boundaries */
-  function buildBodyHtml(text){
+  function buildBodyHtml(text, articleImages){
     if(!text || !text.trim()){
       return '<p class="article-empty">বিস্তারিত পঠ্যক্ষণ চলছে…</p>';
     }
@@ -100,6 +101,7 @@
     const sentences = splitSentences(normalized);
     if(sentences.length === 0) return '<p>' + escHtml(normalized) + '</p>';
 
+    const images = (articleImages || []).filter(Boolean);
     const parts = [];
     /* lede — first paragraph (plain body text, no drop cap or styled lead-in) */
     const firstCount = sentences.length >= 4 ? 3 : Math.max(1, sentences.length - 1);
@@ -115,14 +117,29 @@
       }
     }
 
-    /* remaining sentences grouped into paragraphs of 2-3 */
+    /* remaining sentences grouped into paragraphs of 2-3, with images interspersed */
     const rest = sentences.slice(firstCount);
     let buf = [];
+    let paraIndex = 0;
+    const imgAt = {};
+    images.forEach(img => { imgAt[img.sort_order] = img; });
+
     for(let i = 0; i < rest.length; i++){
       buf.push(rest[i]);
       if(buf.length >= 2 || i === rest.length - 1){
+        while(imgAt[paraIndex]){
+          const img = imgAt[paraIndex];
+          parts.push(
+            '<figure class="article-inline-figure">' +
+              '<img src="' + escAttr(img.image_url) + '" alt="' + escAttr(img.caption || "") + '" loading="lazy" referrerpolicy="no-referrer">' +
+              (img.caption ? '<figcaption>' + escHtml(img.caption) + '</figcaption>' : '') +
+            '</figure>'
+          );
+          paraIndex++;
+        }
         parts.push(`<p>${escHtml(buf.join(" "))}</p>`);
         buf = [];
+        paraIndex++;
       }
     }
     return parts.join("\n");
@@ -182,7 +199,7 @@
       if(!filtered.length){ box.innerHTML = '<p class="aside-empty">আর কোনো খবর নেই</p>'; return; }
       box.innerHTML = filtered.map(x => `
         <a class="related-item" href="/news.html?id=${x.id}">
-          <div class="related-thumb"><img src="${escAttr(x.image || '')}" alt="" loading="lazy"></div>
+          <div class="related-thumb"><img src="${escAttr(x.image || '')}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.parentElement.classList.add('img-missing')"></div>
           <div class="related-body">
             <div class="related-cat">${escHtml(x.subcategory || x.category || "")}</div>
             <div class="related-title">${escHtml(x.title || "")}</div>
@@ -396,6 +413,58 @@
       });
       if (r.ok) loadComments();
     } catch {}
+  };
+
+  /* ===== Newsletter subscribe ===== */
+  document.getElementById("nlSubscribeBtn")?.addEventListener("click", function(){
+    const content = document.getElementById("newsletterContent");
+    if(!content) return;
+    content.innerHTML = `
+      <div class="nl-form">
+        <input id="nlName" type="text" placeholder="আপনার নাম" autocomplete="name">
+        <input id="nlPhone" type="tel" placeholder="মোবাইল নম্বর" autocomplete="tel">
+        <input id="nlEmail" type="email" placeholder="ইমেইল" autocomplete="email">
+        <input id="nlPass" type="password" placeholder="পাসওয়ার্ড (ন্যূনতম ৪ অক্ষর)" autocomplete="new-password">
+        <button type="button" class="aside-cta" id="nlSubmitBtn">নিবন্ধন</button>
+        <div id="nlMsg" class="nl-msg"></div>
+      </div>`;
+    document.getElementById("nlSubmitBtn")?.addEventListener("click", submitNewsletter);
+  });
+
+  window.submitNewsletter = function(){
+    const name = document.getElementById("nlName");
+    const phone = document.getElementById("nlPhone");
+    const email = document.getElementById("nlEmail");
+    const pass = document.getElementById("nlPass");
+    const msg = document.getElementById("nlMsg");
+    if(!name || !phone || !email || !pass || !msg) return;
+    if(!name.value.trim()){ msg.textContent = "নাম লিখুন"; msg.style.color="#f55"; return; }
+    if(!phone.value.trim()){ msg.textContent = "মোবাইল নম্বর লিখুন"; msg.style.color="#f55"; return; }
+    if(!email.value.trim()){ msg.textContent = "ইমেইল লিখুন"; msg.style.color="#f55"; return; }
+    if(pass.value.length < 4){ msg.textContent = "পাসওয়ার্ড কমপক্ষে ৪ অক্ষর"; msg.style.color="#f55"; return; }
+    msg.textContent = "নিবন্ধন হচ্ছে..."; msg.style.color = "#aaa";
+    fetch("/api/subscribe", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: name.value.trim(),
+        phone: phone.value.trim(),
+        email: email.value.trim(),
+        password: pass.value
+      })
+    }).then(r => r.json()).then(j => {
+      if(j.ok){
+        msg.textContent = "✅ নিবন্ধন সফল!";
+        msg.style.color = "#4caf50";
+        document.getElementById("newsletterContent").innerHTML = '<p class="aside-text" style="color:#4caf50;">✅ আপনি নিউজলেটারে নিবন্ধিত হয়েছেন!</p>';
+      } else {
+        msg.textContent = "❌ " + (j.error || "ব্যর্থ");
+        msg.style.color = "#f55";
+      }
+    }).catch(() => {
+      msg.textContent = "❌ সংযোগ ব্যর্থ";
+      msg.style.color = "#f55";
+    });
   };
 
   function showError(msg){

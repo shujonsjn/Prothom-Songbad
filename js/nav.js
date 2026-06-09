@@ -38,6 +38,10 @@
     let s;
     try { s = JSON.parse(saved); } catch(e){ return null; }
     if(!s.email) return null;
+    /* skip profile fetch for admin emails (fake admin email not in DB) */
+    if(s.is_admin || s.email.endsWith("@admin.prothom-songbad.com")){
+      return s.name ? s : null;
+    }
     try {
       const r = await fetch("/api/subscriber/profile?email=" + encodeURIComponent(s.email));
       if(r.ok){

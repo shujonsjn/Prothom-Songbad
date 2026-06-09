@@ -57,6 +57,16 @@ let schemaReady = (async () => {
     )
   `);
   await db.exec(`
+    CREATE TABLE IF NOT EXISTS news_images (
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      news_id    INTEGER NOT NULL,
+      image_url  TEXT    NOT NULL,
+      caption    TEXT    DEFAULT '',
+      sort_order INTEGER DEFAULT 0
+    )
+  `);
+  try { await db.exec("CREATE INDEX IF NOT EXISTS idx_news_images_news ON news_images(news_id, sort_order)"); } catch {}
+  await db.exec(`
     CREATE TABLE IF NOT EXISTS categories (
       name       TEXT PRIMARY KEY,
       sort_order INTEGER DEFAULT 0,
@@ -108,6 +118,7 @@ let schemaReady = (async () => {
   /* self-healing migration for older deployments (adds email/phone to existing rows) */
   try { await db.exec("ALTER TABLE admins ADD COLUMN email TEXT"); } catch {}
   try { await db.exec("ALTER TABLE admins ADD COLUMN phone TEXT"); } catch {}
+  try { await db.exec("ALTER TABLE admins ADD COLUMN avatar TEXT"); } catch {}
 
   /* ===== Inbox (incoming email from Cloudflare Email Routing / others) ===== */
   await db.exec(`
@@ -369,6 +380,19 @@ function fileToDataUrl(file) {
   return `data:${file.mimetype};base64,${file.buffer.toString("base64")}`;
 }
 
+function parseArticleImages(raw) {
+  if (!raw) return [];
+  try {
+    const arr = typeof raw === "string" ? JSON.parse(raw) : raw;
+    if (!Array.isArray(arr)) return [];
+    return arr.map((img, i) => ({
+      image_url: String(img.image_url || "").trim(),
+      caption: String(img.caption || "").trim(),
+      sort_order: typeof img.sort_order === "number" ? img.sort_order : i
+    })).filter(img => img.image_url && /^https?:\/\//.test(img.image_url));
+  } catch { return []; }
+}
+
 /* ===== Public API ===== */
 app.get("/api/news", async (req, res) => {
   try {
@@ -398,6 +422,10 @@ app.get("/api/news/:id", async (req, res) => {
   try {
     const row = await db.prepare("SELECT * FROM news WHERE id = ?").get(req.params.id);
     if (!row) return res.status(404).json({ error: "News not found" });
+    const images = await db.prepare(
+      "SELECT id, image_url, caption, sort_order FROM news_images WHERE news_id = ? ORDER BY sort_order ASC, id ASC"
+    ).all(req.params.id);
+    row.article_images = images;
     res.json(row);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -552,6 +580,7 @@ app.delete("/api/categories/:name", requireAuth, async (req, res) => {
         error: `“${name}” ক্যাটাগরিতে ${used.c}টি সংবাদ আছে — আগে সেগুলো মুছুন বা অন্য ক্যাটাগরিতে সরান`
       });
     }
+    await db.prepare("DELETE FROM subcategories WHERE category = ?").run(name);
     const r = await db.prepare("DELETE FROM categories WHERE name = ?").run(name);
     if (r.changes === 0) return res.status(404).json({ error: "Category not found" });
     res.json({ ok: true, name });
@@ -877,6 +906,8 @@ app.post("/api/comments", async (req, res) => {
     if (!news_id) return res.status(400).json({ error: "news_id required" });
     if (!email || !email.trim()) return res.status(400).json({ error: "Login required to comment" });
     if (!body || !body.trim()) return res.status(400).json({ error: "Comment body required" });
+    const newsExists = await db.prepare("SELECT 1 FROM news WHERE id = ?").get(news_id);
+    if (!newsExists) return res.status(404).json({ error: "নিউজটি খুঁজে পাওয়া যায়নি" });
     /* verify subscriber exists and is active */
     const sub = await db.prepare(
       "SELECT name, active FROM subscribers WHERE LOWER(email) = ?"
@@ -1041,13 +1072,14 @@ app.get("/api/admin/profile", requireAuth, async (req, res) => {
       username: ADMIN_USER,
       display_name: "Editor",
       role: "admin",
+      avatar: null,
       created_at: null,
       last_login: null,
       source: "env"
     });
   }
   const row = await db.prepare(
-    "SELECT id, username, display_name, role, email, phone, created_at, last_login, updated_at FROM admins WHERE id = ?"
+    "SELECT id, username, display_name, role, email, phone, avatar, created_at, last_login, updated_at FROM admins WHERE id = ?"
   ).get(req.admin.id);
   if (!row) return res.status(404).json({ error: "Admin not found" });
   res.json({ ...row, source: "db" });
@@ -1055,7 +1087,7 @@ app.get("/api/admin/profile", requireAuth, async (req, res) => {
 
 app.put("/api/admin/profile", requireAuth, async (req, res) => {
   await ready();
-  const { username, display_name, email, phone, current_password, new_password } = req.body || {};
+  const { username, display_name, email, phone, avatar, current_password, new_password } = req.body || {};
 
   /* if env-managed, promote to a real DB row on first edit (so we can persist changes) */
   if (req.admin?._env) {
@@ -1070,7 +1102,7 @@ app.put("/api/admin/profile", requireAuth, async (req, res) => {
 
   /* get current row */
   const cur = await db.prepare(
-    "SELECT id, username, password, display_name, email, phone FROM admins WHERE id = ?"
+    "SELECT id, username, password, display_name, email, phone, avatar FROM admins WHERE id = ?"
   ).get(req.admin.id);
   if (!cur) return res.status(404).json({ error: "Admin not found" });
 
@@ -1134,16 +1166,31 @@ app.put("/api/admin/profile", requireAuth, async (req, res) => {
     }
   }
 
+  /* avatar — if provided, store data URL or external URL (max 500KB) */
+  let newAvatar = cur.avatar;
+  if (avatar !== undefined) {
+    const trimmed = String(avatar).trim();
+    if (trimmed) {
+      if (trimmed.length > 500000) {
+        return res.status(400).json({ error: "Avatar image太大了 (max 500KB)" });
+      }
+      newAvatar = trimmed;
+    } else {
+      newAvatar = null;
+    }
+  }
+
   await db.prepare(
-    "UPDATE admins SET username = ?, password = ?, display_name = ?, email = ?, phone = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
-  ).run(newUsername, newHash, newDisplay, newEmail, newPhone, cur.id);
+    "UPDATE admins SET username = ?, password = ?, display_name = ?, email = ?, phone = ?, avatar = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
+  ).run(newUsername, newHash, newDisplay, newEmail, newPhone, newAvatar, cur.id);
 
   res.json({
     ok: true,
     username: newUsername,
     display_name: newDisplay,
     email: newEmail,
-    phone: newPhone
+    phone: newPhone,
+    avatar: newAvatar
   });
 });
 
@@ -1392,6 +1439,10 @@ app.post("/api/news", requireAuth, upload.single("image"), async (req, res) => {
     if (!title || !category || !details) {
       return res.status(400).json({ error: "title, category, details are required" });
     }
+    const catExists = await db.prepare("SELECT 1 FROM categories WHERE name = ?").get(category);
+    if (!catExists) {
+      return res.status(400).json({ error: `“${category}” ক্যাটাগরি নেই — আগে ক্যাটাগরি তৈরি করুন` });
+    }
     let image = null;
     if (req.file) {
       image = fileToDataUrl(req.file);
@@ -1404,7 +1455,16 @@ app.post("/api/news", requireAuth, upload.single("image"), async (req, res) => {
     const r = await db.prepare(
       "INSERT INTO news (title, category, subcategory, details, image, video, time) VALUES (?, ?, ?, ?, ?, ?, ?)"
     ).run(title, category, sub, details, image, v, time);
-    const row = await db.prepare("SELECT * FROM news WHERE id = ?").get(r.lastInsertRowid);
+    const newsId = r.lastInsertRowid;
+    /* handle article images */
+    const articleImages = parseArticleImages(req.body.articleImages);
+    for (const img of articleImages) {
+      await db.prepare(
+        "INSERT INTO news_images (news_id, image_url, caption, sort_order) VALUES (?, ?, ?, ?)"
+      ).run(newsId, img.image_url, img.caption, img.sort_order);
+    }
+    const row = await db.prepare("SELECT * FROM news WHERE id = ?").get(newsId);
+    row.article_images = articleImages;
     res.status(201).json(row);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -1415,15 +1475,23 @@ app.put("/api/news/:id", requireAuth, upload.single("image"), async (req, res) =
   try {
     const existing = await db.prepare("SELECT * FROM news WHERE id = ?").get(req.params.id);
     if (!existing) return res.status(404).json({ error: "News not found" });
+    if (req.body.category && req.body.category !== existing.category) {
+      const catExists = await db.prepare("SELECT 1 FROM categories WHERE name = ?").get(req.body.category);
+      if (!catExists) {
+        return res.status(400).json({ error: `“${req.body.category}” ক্যাটাগরি নেই — আগে ক্যাটাগরি তৈরি করুন` });
+      }
+    }
 
-    const { title, category, subcategory, details, imageUrl, video } = req.body;
+    const { title, category, subcategory, details, imageUrl, video, keepImage } = req.body;
     let image;
     if (req.file) {
       image = fileToDataUrl(req.file);
     } else if (typeof imageUrl === "string" && /^https?:\/\//.test(imageUrl)) {
       image = imageUrl;
-    } else {
+    } else if (keepImage === "1" && existing.image) {
       image = existing.image;
+    } else {
+      image = null;
     }
     let videoVal;
     if (typeof video === "string") {
@@ -1451,6 +1519,15 @@ app.put("/api/news/:id", requireAuth, upload.single("image"), async (req, res) =
       req.params.id
     );
     const row = await db.prepare("SELECT * FROM news WHERE id = ?").get(req.params.id);
+    /* handle article images */
+    await db.prepare("DELETE FROM news_images WHERE news_id = ?").run(req.params.id);
+    const articleImages = parseArticleImages(req.body.articleImages);
+    for (const img of articleImages) {
+      await db.prepare(
+        "INSERT INTO news_images (news_id, image_url, caption, sort_order) VALUES (?, ?, ?, ?)"
+      ).run(req.params.id, img.image_url, img.caption, img.sort_order);
+    }
+    row.article_images = articleImages;
     res.json(row);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -1461,6 +1538,7 @@ app.delete("/api/news/:id", requireAuth, async (req, res) => {
   try {
     const existing = await db.prepare("SELECT * FROM news WHERE id = ?").get(req.params.id);
     if (!existing) return res.status(404).json({ error: "News not found" });
+    await db.prepare("DELETE FROM news_images WHERE news_id = ?").run(req.params.id);
     await db.prepare("DELETE FROM news WHERE id = ?").run(req.params.id);
     res.json({ ok: true, id: Number(req.params.id) });
   } catch (err) {
@@ -1509,7 +1587,7 @@ app.post("/api/inbox/webhook", async (req, res) => {
     const html = body_html ? String(body_html).slice(0, 200000) : null;
     const snippet = (txt || (html ? html.replace(/<[^>]+>/g, " ") : "")).replace(/\s+/g, " ").trim().slice(0, 220);
     const result = await db.prepare(
-      "INSERT INTO inbox_messages (direction, from_email, from_name, to_email, subject, snippet, body_text, body_html, message_id, in_reply_to, headers_json, source) VALUES (?, 'inbound', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      "INSERT INTO inbox_messages (direction, from_email, from_name, to_email, subject, snippet, body_text, body_html, message_id, in_reply_to, headers_json, source) VALUES ('inbound', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     ).run(
       fromEmail, fromName, toEmail, subj, snippet, txt, html,
       message_id || null, in_reply_to || null,
@@ -1711,6 +1789,78 @@ export default {
 };
 `;
   res.json({ code, webhookUrl, secretEnv: "INBOX_WEBHOOK_SECRET" });
+});
+
+/* ===== Admin Users CRUD ===== */
+app.get("/api/admins", requireAuth, async (req, res) => {
+  await ready();
+  const rows = await db.prepare(
+    "SELECT id, username, display_name, role, email, phone, created_at, last_login FROM admins ORDER BY role, username"
+  ).all();
+  res.json(rows);
+});
+
+app.post("/api/admins", requireAuth, async (req, res) => {
+  await ready();
+  const { username, password, display_name, role, email, phone } = req.body || {};
+  const u = String(username || "").trim();
+  const p = String(password || "");
+  const d = String(display_name || u).trim().slice(0, 60) || "Editor";
+  const r = role === "superadmin" ? "superadmin" : "admin";
+  if (!u || u.length < 2) return res.status(400).json({ error: "Username কমপক্ষে ২ অক্ষরের হতে হবে" });
+  if (!/^[a-zA-Z0-9_.-]+$/.test(u))
+    return res.status(400).json({ error: "Username শুধু letter, number, _, ., - হতে পারে" });
+  if (p.length < 4) return res.status(400).json({ error: "পাসওয়ার্ড কমপক্ষে ৪ অক্ষরের হতে হবে" });
+  const exists = await db.prepare("SELECT id FROM admins WHERE username = ?").get(u);
+  if (exists) return res.status(409).json({ error: "Username already taken" });
+  const hash = await bcrypt.hash(p, 10);
+  let e = String(email || "").trim().toLowerCase().slice(0, 120) || null;
+  if (e && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e)) e = null;
+  let ph = String(phone || "").trim().slice(0, 20) || null;
+  const result = await db.prepare(
+    "INSERT INTO admins (username, password, display_name, role, email, phone) VALUES (?, ?, ?, ?, ?, ?)"
+  ).run(u, hash, d, r, e, ph);
+  res.json({ ok: true, id: result.lastInsertRowid, username: u, display_name: d, role: r });
+});
+
+app.put("/api/admins/:id", requireAuth, async (req, res) => {
+  await ready();
+  const id = Number(req.params.id);
+  const cur = await db.prepare("SELECT id, username, password FROM admins WHERE id = ?").get(id);
+  if (!cur) return res.status(404).json({ error: "Admin not found" });
+  if (cur.id === req.admin?.id && req.body?.role && req.body.role !== (req.admin.role || "admin"))
+    return res.status(400).json({ error: "You cannot change your own role" });
+  const { username, password, display_name, role, email, phone } = req.body || {};
+  let u = String(username || cur.username).trim();
+  if (!/^[a-zA-Z0-9_.-]+$/.test(u))
+    return res.status(400).json({ error: "Username শুধু letter, number, _, ., - হতে পারে" });
+  const dup = await db.prepare("SELECT id FROM admins WHERE username = ? AND id != ?").get(u, id);
+  if (dup) return res.status(409).json({ error: "Username already taken" });
+  let newHash = cur.password;
+  if (password) {
+    if (String(password).length < 4) return res.status(400).json({ error: "পাসওয়ার্ড কমপক্ষে ৪ অক্ষরের হতে হবে" });
+    newHash = await bcrypt.hash(password, 10);
+  }
+  const d = String(display_name || "").trim().slice(0, 60) || "Editor";
+  const r = role === "superadmin" ? "superadmin" : role === "admin" ? "admin" : undefined;
+  let e = email !== undefined ? (String(email).trim().toLowerCase().slice(0, 120) || null) : undefined;
+  if (e && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e))
+    return res.status(400).json({ error: "Email ঠিকমতো দিন" });
+  let ph = phone !== undefined ? (String(phone).trim().slice(0, 20) || null) : undefined;
+  await db.prepare(
+    "UPDATE admins SET username = ?, password = ?, display_name = ?, role = COALESCE(?, role), email = COALESCE(?, email), phone = COALESCE(?, phone), updated_at = CURRENT_TIMESTAMP WHERE id = ?"
+  ).run(u, newHash, d, r || null, e ?? null, ph ?? null, id);
+  res.json({ ok: true, id, username: u });
+});
+
+app.delete("/api/admins/:id", requireAuth, async (req, res) => {
+  await ready();
+  const id = Number(req.params.id);
+  if (id === req.admin?.id) return res.status(400).json({ error: "You cannot delete yourself" });
+  const cur = await db.prepare("SELECT id FROM admins WHERE id = ?").get(id);
+  if (!cur) return res.status(404).json({ error: "Admin not found" });
+  await db.prepare("DELETE FROM admins WHERE id = ?").run(id);
+  res.json({ ok: true });
 });
 
 /* ===== Serverless handler ===== */

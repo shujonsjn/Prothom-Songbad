@@ -33,9 +33,9 @@
   <div class="box">
     <div class="masthead">The Editorial Desk</div>
     <div class="sub">Sign in to continue</div>
-    <div class="field"><input id="u" placeholder=" " autocomplete="username"><label>Username</label></div>
-    <div class="field"><input id="p" type="password" placeholder=" " autocomplete="current-password"><label>Password</label></div>
-    <button class="btn-filled btn-block" onclick="login()" style="margin-top:20px;height:48px;">
+    <div class="field"><input id="u" placeholder=" " autocomplete="username" onkeydown="if(event.key==='Enter') document.getElementById('p').focus()"><label>Username</label></div>
+    <div class="field"><input id="p" type="password" placeholder=" " autocomplete="current-password" onkeydown="if(event.key==='Enter') login()"><label>Password</label></div>
+    <button class="btn-filled btn-block" onclick="login()" type="button" style="margin-top:20px;height:48px;">
       <span class="ms" style="font-size:18px;">login</span> Sign in
     </button>
     <div class="login-hint">← <a href="index.html" style="color:var(--md-primary);">হোমপেজে ফিরুন</a></div>
@@ -115,6 +115,11 @@
           <span class="sb-icon"><span class="ms">inbox</span></span>
           <span class="sb-label">Inbox</span>
           <span class="sb-count" id="cntInbox" style="display:none;"></span>
+        </a>
+        <a href="#" class="sb-link" data-section="users">
+          <span class="sb-icon"><span class="ms">manage_accounts</span></span>
+          <span class="sb-label">Users / Admins</span>
+          <span class="sb-count" id="cntUsers">–</span>
         </a>
         <a href="index.html" class="sb-link sb-external">
           <span class="sb-icon"><span class="ms">open_in_new</span></span>
@@ -264,7 +269,84 @@
             <button type="button" id="addSubInline" class="btn-tonal" style="height:56px;padding:0 20px;white-space:nowrap;margin:0;" title="এই category-তে নতুন sub যোগ করুন"><span class="ms" style="font-size:18px;">add</span> নতুন sub</button>
           </div>
 
-          <div class="field"><textarea id="details" placeholder=" "></textarea><label>Details</label></div>
+          <div style="margin:18px 0 8px;">
+            <div class="editor-toolbar">
+              <button type="button" class="btn-text ed-btn" data-cmd="bold" title="Bold"><strong>B</strong></button>
+              <button type="button" class="btn-text ed-btn" data-cmd="italic" title="Italic"><em>I</em></button>
+              <span class="ed-sep"></span>
+              <select id="edFontSelect" class="ed-font-select" title="Font">
+                <option value="">Font</option>
+                <option value="Hind Siliguri, sans-serif">&#x9B9;&#x9BF;&#x9A8;&#x9CD;&#x9A6; &#x09B8;&#x09BF;&#x09B2;&#x09BF;&#x0997;&#x09C1;&#x09B0;&#x09BF;</option>
+                <option value="Noto Sans Bengali, sans-serif">&#x28;Google&#x29; &#x28;&#x09A8;&#x09CB;&#x099F;&#x09CB; &#x09B8;&#x09CD;&#x09AF;&#x09BE;&#x09A8;&#x09CD;&#x09B8; &#x09AC;&#x09BE;&#x0982;&#x09B2;&#x09BE;</option>
+                <option value="Noto Serif Bengali, serif">&#x28;Google&#x29; &#x28;&#x09A8;&#x09CB;&#x099F;&#x09CB; &#x09B8;&#x09C7;&#x09B0;&#x09BF;&#x09AB; &#x09AC;&#x09BE;&#x0982;&#x09B2;&#x09BE;</option>
+                <option value="Baloo Da 2, sans-serif">&#x28;Google&#x29; &#x09AC;&#x09BE;&#x09B2;&#x09C1; &#x09A6;&#x09BE; &#x9E7;</option>
+                <option value="Galada, cursive">&#x28;Google&#x29; &#x0997;&#x09BE;&#x09B2;&#x09BE;&#x09A6;&#x09BE;</option>
+                <option value="Siyam Rupali, sans-serif">&#x09B8;&#x09BF;&#x09DF;&#x09BE;&#x09AE; &#x09B0;&#x09C1;&#x09AA;&#x09BE;&#x09B2;&#x09BF;</option>
+                <option value="SolaimanLipi, sans-serif">&#x09B8;&#x09CB;&#x09B2;&#x09BE;&#x0987;&#x09AE;&#x09BE;&#x09A8; &#x09B2;&#x09BF;&#x09AA;&#x09BF;</option>
+                <option value="AdorshoLipi, sans-serif">&#x0986;&#x09A6;&#x09B0;&#x09CD;&#x09B6;&#x09B2;&#x09BF;&#x09AA;&#x09BF;</option>
+                <option value="Arial, sans-serif">Arial</option>
+                <option value="'Times New Roman', serif">Times New Roman</option>
+              </select>
+              <span class="ed-sep"></span>
+              <button type="button" class="btn-text ed-btn" id="edInsertImage" title="Insert Image">
+                <span class="ms" style="font-size:18px;">add_photo_alternate</span> Image
+              </button>
+            </div>
+            <div id="detailsEditor" contenteditable="true" class="editor-body" data-placeholder="লেখা শুরু করুন…"></div>
+          </div>
+
+          <!-- Image insert popup -->
+          <div id="imgInsertPopup" class="img-insert-popup" style="display:none;">
+            <div class="img-insert-header">
+              <span class="ms" style="font-size:20px;color:var(--md-primary);">add_photo_alternate</span>
+              <span style="font-weight:600;">Insert Image</span>
+            </div>
+            <div class="img-insert-body">
+              <div class="field" style="margin:0 0 8px;">
+                <input id="insImgUrl" placeholder=" ">
+                <label>Image URL</label>
+              </div>
+              <div class="img-insert-or"><span>OR</span></div>
+              <div class="img-insert-file">
+                <input type="file" id="insImgFile" accept="image/*">
+              </div>
+              <div class="field" style="margin:6px 0;">
+                <input id="insImgAlt" placeholder=" ">
+                <label>Alt text (optional)</label>
+              </div>
+              <div class="field" style="margin:6px 0;">
+                <input id="insImgCaption" placeholder=" ">
+                <label>Caption (optional)</label>
+              </div>
+              <div class="img-insert-row">
+                <div class="field" style="margin:6px 0;flex:1;">
+                  <input id="insImgLink" placeholder=" ">
+                  <label>Link URL (optional)</label>
+                </div>
+              </div>
+              <div class="img-insert-row">
+                <div class="img-insert-opt">
+                  <label class="img-opt-label">Align</label>
+                  <label class="img-opt-radio"><input type="radio" name="insAlign" value="center" checked> Center</label>
+                  <label class="img-opt-radio"><input type="radio" name="insAlign" value="left"> Left</label>
+                  <label class="img-opt-radio"><input type="radio" name="insAlign" value="right"> Right</label>
+                </div>
+                <div class="img-insert-opt">
+                  <label class="img-opt-label">Size</label>
+                  <label class="img-opt-radio"><input type="radio" name="insSize" value="small"> Small</label>
+                  <label class="img-opt-radio"><input type="radio" name="insSize" value="medium" checked> Medium</label>
+                  <label class="img-opt-radio"><input type="radio" name="insSize" value="large"> Large</label>
+                </div>
+              </div>
+            </div>
+            <div class="img-insert-actions">
+              <button type="button" class="btn-text" id="insImgCancel"><span class="ms">close</span> Cancel</button>
+              <button type="button" class="btn-filled" id="insImgInsert"><span class="ms">check</span> Insert</button>
+            </div>
+          </div>
+          <div id="imgInsertOverlay" class="img-insert-overlay" style="display:none;"></div>
+
+          <textarea id="details" style="display:none;"></textarea>
           <input type="file" id="img">
           <div class="field"><input id="imageUrl" placeholder=" "><label>Image URL (optional)</label></div>
           <div class="field"><input id="video" placeholder=" "><label>Video URL — YouTube/Vimeo embed or .mp4 (optional)</label></div>
@@ -459,7 +541,11 @@
 
           <div class="profile-grid">
             <div class="profile-avatar" id="profileAvatar">
-              <span class="ms" style="font-size:36px;color:var(--md-on-primary-cont);">person</span>
+              <img id="profileAvatarImg" style="display:none;width:100%;height:100%;object-fit:cover;border-radius:50%;">
+              <span class="ms" id="profileAvatarFallback" style="font-size:36px;color:var(--md-on-primary-cont);">person</span>
+              <div class="profile-avatar-overlay" onclick="document.getElementById('avatarFileInput').click()">
+                <span class="ms">camera_alt</span>
+              </div>
             </div>
             <div class="profile-info">
               <div class="profile-name" id="profileName">–</div>
@@ -469,6 +555,8 @@
             </div>
           </div>
 
+          <input type="file" id="avatarFileInput" accept="image/*" style="display:none" onchange="previewAvatarFile(this)">
+
           <hr class="md-divider">
 
           <form id="profileForm" onsubmit="return false;" autocomplete="off">
@@ -476,6 +564,7 @@
             <div class="field"><input id="pDisplayName" placeholder=" " autocomplete="off"><label>Display name (sidebar-এ দেখাবে)</label></div>
             <div class="field"><input id="pEmail" type="email" placeholder=" " autocomplete="off"><label>Email (যোগাযোগের জন্য — optional)</label></div>
             <div class="field"><input id="pPhone" type="tel" placeholder=" " autocomplete="off"><label>Phone (BD format: 01XXXXXXXXX — optional)</label></div>
+            <div class="field"><input id="pAvatarUrl" placeholder=" " autocomplete="off"><label>Avatar URL (optional — URL বা ফাইল আপলোড দিন)</label></div>
 
             <hr class="md-divider">
             <h4 style="margin:0 0 12px;font-size:14px;color:var(--md-on-surface-var);font-weight:600;letter-spacing:.04em;">
@@ -630,6 +719,56 @@
           <main class="inbox-view" id="inboxView">
             <div class="inbox-empty">Select a message to read</div>
           </main>
+        </div>
+      </section>
+
+      <!-- ===== USERS / ADMINS SECTION ===== -->
+      <section class="admin-section" data-section="users">
+        <h2 class="section-title"><span class="md-icon"><span class="ms">manage_accounts</span></span>Users / Admins</h2>
+        <div class="card" style="margin-bottom:14px;">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
+            <div class="field" style="flex:1;min-width:140px;"><input id="newAdminUsername" placeholder=" "><label>Username</label></div>
+            <div class="field" style="flex:1;min-width:140px;"><input id="newAdminPass" type="password" placeholder=" "><label>Password</label></div>
+            <div class="field" style="flex:1;min-width:140px;"><input id="newAdminName" placeholder=" "><label>Display Name</label></div>
+            <div class="field" style="flex:0 1 120px;">
+              <select id="newAdminRole"><option value="admin">Admin</option><option value="superadmin">Super Admin</option></select>
+              <label>Role</label>
+            </div>
+            <button class="btn-filled" type="button" onclick="addAdmin()"><span class="ms">person_add</span> Add</button>
+          </div>
+          <div id="userFormMsg" class="profile-note" style="display:none;margin-top:8px;"></div>
+        </div>
+
+        <!-- Edit user popup -->
+        <div id="editUserPopup" class="img-insert-popup" style="display:none;">
+          <div class="img-insert-header"><span class="ms" style="font-size:20px;color:var(--md-primary);">edit</span><span style="font-weight:600;">Edit User</span></div>
+          <div class="img-insert-body">
+            <div class="field" style="margin:0 0 8px;"><input id="editAdminUsername" placeholder=" "><label>Username</label></div>
+            <div class="field" style="margin:0 0 8px;"><input id="editAdminPass" type="password" placeholder=" "><label>New Password (leave empty to keep)</label></div>
+            <div class="field" style="margin:0 0 8px;"><input id="editAdminName" placeholder=" "><label>Display Name</label></div>
+            <div class="field" style="margin:0 0 8px;">
+              <select id="editAdminRole"><option value="admin">Admin</option><option value="superadmin">Super Admin</option></select>
+              <label>Role</label>
+            </div>
+            <div class="field" style="margin:0 0 8px;"><input id="editAdminEmail" placeholder=" "><label>Email (optional)</label></div>
+            <div class="field" style="margin:0 0 8px;"><input id="editAdminPhone" placeholder=" "><label>Phone (optional)</label></div>
+          </div>
+          <div class="img-insert-actions">
+            <button type="button" class="btn-text" onclick="closeEditUser()"><span class="ms">close</span> Cancel</button>
+            <button type="button" class="btn-filled" onclick="saveEditUser()"><span class="ms">check</span> Save</button>
+          </div>
+        </div>
+        <div id="editUserOverlay" class="img-insert-overlay" style="display:none;" onclick="closeEditUser()"></div>
+
+        <div class="card" style="padding:0;overflow-x:auto;">
+          <table class="subscribers-table" id="usersTable">
+            <thead>
+              <tr><th>Username</th><th>Display Name</th><th>Role</th><th>Email</th><th>Phone</th><th>Last Login</th><th>Created</th><th>Actions</th></tr>
+            </thead>
+            <tbody id="usersList">
+              <tr><td colspan="8" class="inbox-empty">লোড হচ্ছে...</td></tr>
+            </tbody>
+          </table>
         </div>
       </section>
 

@@ -511,7 +511,23 @@
   setSidebarUser("admin");
 
   /* ===== SAVE / PUBLISH (create or update) ===== */
+  /* sync contenteditable → hidden textarea before form use */
+  function syncEditor(){
+    const ed = document.getElementById("detailsEditor");
+    const ta = document.getElementById("details");
+    if(!ed || !ta) return;
+    /* normalize — wrap bare text nodes in <div> */
+    let html = ed.innerHTML;
+    if(!/<[a-z][\s\S]*>/i.test(html)){
+      /* plain text only, wrap in div */
+      html = html.replace(/\n{2,}/g, '</div><div>').replace(/\n/g, '<br>');
+      html = '<div>' + html + '</div>';
+    }
+    ta.value = html;
+  }
+
   window.save = function(){
+    syncEditor();
     if(!title.value || !category.value || !details.value){
       toast("Title, Category, Details সবগুলো দিতে হবে", "warn");
       return;
@@ -1142,7 +1158,8 @@
           const exists = Array.from(subcat.options).some(o => o.value === (n.subcategory || ""));
           if(exists || !n.subcategory) subcat.value = n.subcategory || "";
         }
-        details.value  = n.details;
+        detailsEditor.innerHTML = n.details;
+        document.getElementById("details").value = n.details;
         document.getElementById("imageUrl").value  = (n.image && !n.image.startsWith("data:")) ? n.image : "";
         document.getElementById("video").value     = n.video || "";
         editId         = id;
@@ -1188,7 +1205,11 @@
   /* ===== CLEAR FORM ===== */
   function clear(){
     title.value   = "";
-    details.value = "";
+    category.value = "";
+    const ed = document.getElementById("detailsEditor");
+    if(ed) ed.innerHTML = "";
+    const ta = document.getElementById("details");
+    if(ta) ta.value = "";
     img.value     = "";
     const iu = document.getElementById("imageUrl");     if(iu) iu.value = "";
     const vv = document.getElementById("video");        if(vv) vv.value = "";
@@ -1204,7 +1225,87 @@
     if(cancelBtn) cancelBtn.remove();
   }
 
-  /* expose to window for inline handlers */
+  /* editor toolbar */
+  (function(){
+    const ed = document.getElementById("detailsEditor");
+    if(!ed) return;
+
+    document.querySelectorAll(".ed-btn[data-cmd]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.execCommand(btn.dataset.cmd, false, null);
+        ed.focus();
+      });
+    });
+
+    /* font select */
+    const edFont = document.getElementById("edFontSelect");
+    if(edFont){
+      edFont.addEventListener("change", () => {
+        if(edFont.value){ document.execCommand("fontName", false, edFont.value); }
+        edFont.value = "";
+        ed.focus();
+      });
+    }
+
+    /* image insert popup */
+    const popup = document.getElementById("imgInsertPopup");
+    const overlay = document.getElementById("imgInsertOverlay");
+    const insUrl = document.getElementById("insImgUrl");
+    const insFile = document.getElementById("insImgFile");
+    const insAlt = document.getElementById("insImgAlt");
+    const insCaption = document.getElementById("insImgCaption");
+    const insLink = document.getElementById("insImgLink");
+    const insInsert = document.getElementById("insImgInsert");
+    const insCancel = document.getElementById("insImgCancel");
+
+    function showPopup(){ popup.style.display = "block"; overlay.style.display = "block"; }
+    function hidePopup(){ popup.style.display = "none"; overlay.style.display = "none"; insUrl.value = ""; insFile.value = ""; insAlt.value = ""; insCaption.value = ""; insLink.value = ""; document.querySelectorAll('input[name="insAlign"]').forEach(r=>r.checked=r.value==="center"); document.querySelectorAll('input[name="insSize"]').forEach(r=>r.checked=r.value==="medium"); }
+
+    document.getElementById("edInsertImage")?.addEventListener("click", showPopup);
+    insCancel?.addEventListener("click", hidePopup);
+    overlay?.addEventListener("click", hidePopup);
+
+    insInsert?.addEventListener("click", () => {
+      const alt = insAlt.value.trim();
+      const caption = insCaption.value.trim();
+      const link = insLink.value.trim();
+      const align = (document.querySelector('input[name="insAlign"]:checked')||{}).value || "center";
+      const size = (document.querySelector('input[name="insSize"]:checked')||{}).value || "medium";
+      let src = insUrl.value.trim();
+
+      function esc(s){ return s.replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+      function doInsert(s){
+        let img = '<img src="' + esc(s) + '" alt="' + esc(alt) + '" loading="lazy">';
+        if(link && /^https?:\/\//i.test(link)) img = '<a href="' + esc(link) + '">' + img + '</a>';
+        let html = '<figure class="figure-' + align + ' img-' + size + '">' + img;
+        if(caption) html += '<figcaption>' + esc(caption) + '</figcaption>';
+        html += '</figure><div><br></div>';
+        ed.focus();
+        document.execCommand("insertHTML", false, html);
+      }
+
+      if(!src && insFile.files[0]){
+        const reader = new FileReader();
+        reader.onload = () => { doInsert(reader.result); hidePopup(); };
+        reader.readAsDataURL(insFile.files[0]);
+        return;
+      }
+
+      if(src && /^https?:\/\//i.test(src)){ doInsert(src); hidePopup(); return; }
+
+      toast("Please provide an Image URL or select a file", "warn");
+    });
+
+    function insertFigure(src, caption){
+      const html = caption
+        ? '<figure><img src="' + src.replace(/"/g,'&quot;') + '" alt="' + caption.replace(/"/g,'&quot;') + '" loading="lazy"><figcaption>' + caption + '</figcaption></figure><div><br></div>'
+        : '<figure><img src="' + src.replace(/"/g,'&quot;') + '" loading="lazy"></figure><div><br></div>';
+      ed.focus();
+      document.execCommand("insertHTML", false, html);
+    }
+  })();
+
   window.clear = clear;
 
   /* ===== PROFILE ===== */
@@ -1218,6 +1319,18 @@
         document.getElementById("pDisplayName").value = p.display_name || "";
         document.getElementById("pEmail").value       = p.email || "";
         document.getElementById("pPhone").value       = p.phone || "";
+        document.getElementById("pAvatarUrl").value  = p.avatar || "";
+        /* avatar image */
+        const avImg = document.getElementById("profileAvatarImg");
+        const avFallback = document.getElementById("profileAvatarFallback");
+        if(p.avatar){
+          avImg.src = p.avatar;
+          avImg.style.display = "block";
+          avFallback.style.display = "none";
+        } else {
+          avImg.style.display = "none";
+          avFallback.style.display = "";
+        }
         document.getElementById("profileName").textContent = p.display_name || p.username || "Admin";
         document.getElementById("profileRole").textContent = p.role || "admin";
         const created = p.created_at ? p.created_at.slice(0,16).replace("T"," ") : "—";
@@ -1242,8 +1355,13 @@
         if(sbRole) sbRole.textContent = p.role || "admin";
         const sbAv = document.getElementById("sbAvatar");
         if(sbAv){
-          const letter = (p.display_name || p.username || "A").trim().charAt(0).toUpperCase();
-          sbAv.textContent = letter;
+          if(p.avatar){
+            sbAv.innerHTML = '<img src="' + esc(p.avatar) + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">';
+          } else {
+            const letter = (p.display_name || p.username || "A").trim().charAt(0).toUpperCase();
+            sbAv.textContent = letter;
+            sbAv.style.background = "";
+          }
         }
       })
       .catch(err => {
@@ -1261,6 +1379,7 @@
     const dn = document.getElementById("pDisplayName").value.trim();
     const em = document.getElementById("pEmail").value.trim();
     const ph = document.getElementById("pPhone").value.trim();
+    const av = document.getElementById("pAvatarUrl").value.trim();
     const cur = document.getElementById("pCurrentPass").value;
     const np  = document.getElementById("pNewPass").value;
     const cp  = document.getElementById("pConfirmPass").value;
@@ -1269,7 +1388,7 @@
     if(np && np !== cp){ return showNote(note, false, "নতুন password দুটি মিলছে না"); }
     if(np && !cur){ return showNote(note, false, "Password বদলাতে হলে current password দিতে হবে"); }
 
-    const body = { username: u, display_name: dn, email: em, phone: ph };
+    const body = { username: u, display_name: dn, email: em, phone: ph, avatar: av || null };
     if(np){ body.current_password = cur; body.new_password = np; }
 
     fetch("/api/admin/profile", {
@@ -1296,6 +1415,21 @@
         }
       })
       .catch(err => showNote(note, false, err.message));
+  };
+
+  window.previewAvatarFile = function(input){
+    const file = input.files && input.files[0];
+    if(!file) return;
+    if(file.size > 500 * 1024){ toast("File too large (max 500KB)"); input.value = ""; return; }
+    const reader = new FileReader();
+    reader.onload = function(e){
+      const dataUrl = e.target.result;
+      document.getElementById("pAvatarUrl").value = dataUrl;
+      document.getElementById("profileAvatarImg").src = dataUrl;
+      document.getElementById("profileAvatarImg").style.display = "block";
+      document.getElementById("profileAvatarFallback").style.display = "none";
+    };
+    reader.readAsDataURL(file);
   };
 
   function showNote(el, ok, msg){
@@ -1951,6 +2085,146 @@
       btn.classList.add("active");
       _locRange = btn.getAttribute("data-range");
       loadLocationsPage(_locRange);
+    });
+  });
+
+  /* ===== USERS / ADMINS ===== */
+  window.loadUsers = async function(){
+    const tbody = document.getElementById("usersList");
+    const cnt = document.getElementById("cntUsers");
+    if(!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="8" class="inbox-empty">লোড হচ্ছে...</td></tr>';
+    try {
+      const r = await fetch("/api/admins", { headers: authHeader() });
+      if(r.status === 401){ alert("Session expired."); logout(); return; }
+      if(!r.ok) throw new Error("HTTP " + r.status);
+      const data = await r.json();
+      if(cnt) cnt.textContent = data.length;
+      tbody.innerHTML = data.length ? "" : '<tr><td colspan="8" class="inbox-empty">কোনো ইউজার নেই</td></tr>';
+      data.forEach(u => {
+        const tr = document.createElement("tr");
+        const created = u.created_at ? new Date(u.created_at).toLocaleDateString("bn-BD") : "—";
+        const lastLogin = u.last_login ? new Date(u.last_login).toLocaleDateString("bn-BD") : "—";
+        tr.innerHTML =
+          '<td><b>' + esc(u.username) + '</b></td>' +
+          '<td>' + esc(u.display_name || "—") + '</td>' +
+          '<td><span class="user-role-badge ' + u.role + '">' + esc(u.role) + '</span></td>' +
+          '<td>' + esc(u.email || "—") + '</td>' +
+          '<td>' + esc(u.phone || "—") + '</td>' +
+          '<td class="user-last-login">' + lastLogin + '</td>' +
+          '<td class="user-last-login">' + created + '</td>' +
+          '<td>' +
+            '<button class="small-btn" onclick="editUser(' + u.id + ')">Edit</button> ' +
+            '<button class="small-btn" onclick="deleteUser(' + u.id + ')">Delete</button>' +
+          '</td>';
+        tbody.appendChild(tr);
+      });
+    } catch(e){
+      tbody.innerHTML = '<tr><td colspan="8" class="inbox-empty">ত্রুটি: ' + esc(e.message) + '</td></tr>';
+    }
+  };
+
+  window.addAdmin = async function(){
+    const msg = document.getElementById("userFormMsg");
+    msg.style.display = "none";
+    const username = document.getElementById("newAdminUsername").value.trim();
+    const password = document.getElementById("newAdminPass").value;
+    const display_name = document.getElementById("newAdminName").value.trim();
+    const role = document.getElementById("newAdminRole").value;
+    if(!username || username.length < 2){ msg.textContent = "Username দিন (কমপক্ষে ২ অক্ষর)"; msg.style.display = "block"; return; }
+    if(!password || password.length < 4){ msg.textContent = "পাসওয়ার্ড দিন (কমপক্ষে ৪ অক্ষর)"; msg.style.display = "block"; return; }
+    try {
+      const r = await fetch("/api/admins", {
+        method: "POST",
+        headers: { ...authHeader(), "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password, display_name, role })
+      });
+      if(r.status === 401){ alert("Session expired."); logout(); return; }
+      const data = await r.json().catch(() => ({}));
+      if(!r.ok) throw new Error(data.error || "HTTP " + r.status);
+      document.getElementById("newAdminUsername").value = "";
+      document.getElementById("newAdminPass").value = "";
+      document.getElementById("newAdminName").value = "";
+      toast("✅ User " + username + " added");
+      loadUsers();
+    } catch(e){
+      msg.textContent = "❌ " + e.message; msg.style.display = "block";
+    }
+  };
+
+  window.editUser = async function(id){
+    const popup = document.getElementById("editUserPopup");
+    const overlay = document.getElementById("editUserOverlay");
+    try {
+      const r = await fetch("/api/admins", { headers: authHeader() });
+      if(r.status === 401){ alert("Session expired."); logout(); return; }
+      const admins = await r.json();
+      const u = admins.find(a => a.id === id);
+      if(!u){ toast("User not found", "error"); return; }
+      document.getElementById("editAdminUsername").value = u.username || "";
+      document.getElementById("editAdminPass").value = "";
+      document.getElementById("editAdminName").value = u.display_name || "";
+      document.getElementById("editAdminRole").value = u.role || "admin";
+      document.getElementById("editAdminEmail").value = u.email || "";
+      document.getElementById("editAdminPhone").value = u.phone || "";
+      popup.dataset.editId = id;
+      popup.style.display = "block";
+      overlay.style.display = "block";
+    } catch(e){ toast("Error: " + e.message, "error"); }
+  };
+
+  window.closeEditUser = function(){
+    document.getElementById("editUserPopup").style.display = "none";
+    document.getElementById("editUserOverlay").style.display = "none";
+  };
+
+  window.saveEditUser = async function(){
+    const id = Number(document.getElementById("editUserPopup").dataset.editId);
+    const username = document.getElementById("editAdminUsername").value.trim();
+    const password = document.getElementById("editAdminPass").value;
+    const display_name = document.getElementById("editAdminName").value.trim();
+    const role = document.getElementById("editAdminRole").value;
+    const email = document.getElementById("editAdminEmail").value.trim();
+    const phone = document.getElementById("editAdminPhone").value.trim();
+    if(!username || username.length < 2){ toast("Username কমপক্ষে ২ অক্ষর", "warn"); return; }
+    const body = { username, display_name, role, email, phone };
+    if(password) body.password = password;
+    try {
+      const r = await fetch("/api/admins/" + id, {
+        method: "PUT",
+        headers: { ...authHeader(), "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
+      if(r.status === 401){ alert("Session expired."); logout(); return; }
+      const data = await r.json().catch(() => ({}));
+      if(!r.ok) throw new Error(data.error || "HTTP " + r.status);
+      toast("✅ User updated");
+      closeEditUser();
+      loadUsers();
+    } catch(e){ toast("❌ " + e.message, "error"); }
+  };
+
+  window.deleteUser = async function(id){
+    if(!confirm("এই ইউজারকে মুছে ফেলতে চান?")) return;
+    try {
+      const r = await fetch("/api/admins/" + id, {
+        method: "DELETE",
+        headers: authHeader()
+      });
+      if(r.status === 401){ alert("Session expired."); logout(); return; }
+      const data = await r.json().catch(() => ({}));
+      if(!r.ok) throw new Error(data.error || "HTTP " + r.status);
+      toast("✅ User deleted");
+      loadUsers();
+    } catch(e){ toast("❌ " + e.message, "error"); }
+  };
+
+  /* Load users when section is opened */
+  document.querySelectorAll('.sb-link[data-section="users"]').forEach(a => {
+    a.addEventListener("click", (e) => {
+      e.preventDefault();
+      showSection("users");
+      loadUsers();
     });
   });
 

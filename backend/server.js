@@ -66,6 +66,19 @@ function fileToDataUrl(file) {
   return `data:${file.mimetype};base64,${file.buffer.toString("base64")}`;
 }
 
+function parseArticleImages(raw) {
+  if (!raw) return [];
+  try {
+    const arr = typeof raw === "string" ? JSON.parse(raw) : raw;
+    if (!Array.isArray(arr)) return [];
+    return arr.map((img, i) => ({
+      image_url: String(img.image_url || "").trim(),
+      caption: String(img.caption || "").trim(),
+      sort_order: typeof img.sort_order === "number" ? img.sort_order : i
+    })).filter(img => img.image_url && /^https?:\/\//.test(img.image_url));
+  } catch { return []; }
+}
+
 /* ===== PUBLIC API ===== */
 app.get("/api/news", async (req, res) => {
   try {
@@ -88,6 +101,10 @@ app.get("/api/news/:id", async (req, res) => {
   try {
     const row = await db.prepare("SELECT * FROM news WHERE id = ?").get(req.params.id);
     if (!row) return res.status(404).json({ error: "News not found" });
+    const images = await db.prepare(
+      "SELECT id, image_url, caption, sort_order FROM news_images WHERE news_id = ? ORDER BY sort_order ASC, id ASC"
+    ).all(req.params.id);
+    row.article_images = images;
     res.json(row);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -152,7 +169,7 @@ app.get("/api/admin/check", requireAuth, (req, res) => {
 /* Create */
 app.post("/api/news", requireAuth, upload.single("image"), async (req, res) => {
   try {
-    const { title, category, details, imageUrl } = req.body;
+    const { title, category, subcategory, details, imageUrl, video } = req.body;
     if (!title || !category || !details) {
       return res.status(400).json({ error: "title, category, details are required" });
     }
@@ -162,11 +179,21 @@ app.post("/api/news", requireAuth, upload.single("image"), async (req, res) => {
     } else if (imageUrl && /^https?:\/\//.test(imageUrl)) {
       image = imageUrl;
     }
+    const v = (typeof video === "string" && video.trim()) ? video.trim() : null;
+    const sub = (typeof subcategory === "string" && subcategory.trim()) ? subcategory.trim() : null;
     const time = new Date().toLocaleString();
     const r = await db.prepare(
-      "INSERT INTO news (title, category, details, image, time) VALUES (?, ?, ?, ?, ?)"
-    ).run(title, category, details, image, time);
-    const row = await db.prepare("SELECT * FROM news WHERE id = ?").get(r.lastInsertRowid);
+      "INSERT INTO news (title, category, subcategory, details, image, video, time) VALUES (?, ?, ?, ?, ?, ?, ?)"
+    ).run(title, category, sub, details, image, v, time);
+    const newsId = r.lastInsertRowid;
+    const articleImages = parseArticleImages(req.body.articleImages);
+    for (const img of articleImages) {
+      await db.prepare(
+        "INSERT INTO news_images (news_id, image_url, caption, sort_order) VALUES (?, ?, ?, ?)"
+      ).run(newsId, img.image_url, img.caption, img.sort_order);
+    }
+    const row = await db.prepare("SELECT * FROM news WHERE id = ?").get(newsId);
+    row.article_images = articleImages;
     res.status(201).json(row);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -179,27 +206,52 @@ app.put("/api/news/:id", requireAuth, upload.single("image"), async (req, res) =
     const existing = await db.prepare("SELECT * FROM news WHERE id = ?").get(req.params.id);
     if (!existing) return res.status(404).json({ error: "News not found" });
 
-    const { title, category, details, imageUrl } = req.body;
+    const { title, category, subcategory, details, imageUrl, video, keepImage } = req.body;
     let image;
     if (req.file) {
       image = fileToDataUrl(req.file);
     } else if (typeof imageUrl === "string" && /^https?:\/\//.test(imageUrl)) {
       image = imageUrl;
-    } else {
+    } else if (keepImage === "1" && existing.image) {
       image = existing.image;
+    } else {
+      image = null;
+    }
+    let videoVal;
+    if (typeof video === "string") {
+      videoVal = video.trim() ? video.trim() : null;
+    } else {
+      videoVal = existing.video;
+    }
+    let subVal;
+    if (typeof subcategory === "string") {
+      subVal = subcategory.trim() ? subcategory.trim() : null;
+    } else {
+      subVal = existing.subcategory;
     }
 
     await db.prepare(
-      "UPDATE news SET title = ?, category = ?, details = ?, image = ?, time = ? WHERE id = ?"
+      "UPDATE news SET title = ?, category = ?, subcategory = ?, details = ?, image = ?, video = ?, time = ? WHERE id = ?"
     ).run(
       title    ?? existing.title,
       category ?? existing.category,
+      subVal,
       details  ?? existing.details,
       image,
+      videoVal,
       new Date().toLocaleString(),
       req.params.id
     );
     const row = await db.prepare("SELECT * FROM news WHERE id = ?").get(req.params.id);
+    /* handle article images */
+    await db.prepare("DELETE FROM news_images WHERE news_id = ?").run(req.params.id);
+    const articleImages = parseArticleImages(req.body.articleImages);
+    for (const img of articleImages) {
+      await db.prepare(
+        "INSERT INTO news_images (news_id, image_url, caption, sort_order) VALUES (?, ?, ?, ?)"
+      ).run(req.params.id, img.image_url, img.caption, img.sort_order);
+    }
+    row.article_images = articleImages;
     res.json(row);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -211,6 +263,7 @@ app.delete("/api/news/:id", requireAuth, async (req, res) => {
   try {
     const existing = await db.prepare("SELECT * FROM news WHERE id = ?").get(req.params.id);
     if (!existing) return res.status(404).json({ error: "News not found" });
+    await db.prepare("DELETE FROM news_images WHERE news_id = ?").run(req.params.id);
     await db.prepare("DELETE FROM news WHERE id = ?").run(req.params.id);
     res.json({ ok: true, id: Number(req.params.id) });
   } catch (err) {

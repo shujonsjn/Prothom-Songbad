@@ -101,7 +101,7 @@
     return `
       <article class="card-news" onclick="openNews(${n.id})">
         <div class="card-img">
-          <img src="${esc(n.image)}" alt="" loading="lazy">
+          <img src="${esc(n.image)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.parentElement.classList.add('img-missing')">
           ${vid}
         </div>
         <div class="card-body">
@@ -146,7 +146,7 @@
 
     const bigHtml = `
       <article class="hero-big" onclick="openNews(${big.id})">
-        <img src="${esc(big.image)}" alt="" loading="eager">
+        <img src="${esc(big.image)}" alt="" loading="eager" referrerpolicy="no-referrer" onerror="this.onerror=null;this.parentElement.classList.add('img-missing')">
         <div class="hero-big-overlay"></div>
         ${big.video ? `<span class="hero-vid">▶ ভিডিও</span>` : ""}
         <div class="hero-big-title">
@@ -160,7 +160,7 @@
     const medHtml = (n) => n ? `
       <article class="hero-med" onclick="openNews(${n.id})">
         <div class="hero-med-img">
-          <img src="${esc(n.image)}" alt="" loading="lazy">
+          <img src="${esc(n.image)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.parentElement.classList.add('img-missing')">
           <div class="hero-med-img-shade"></div>
           ${n.video ? `<span class="hero-vid-sm">▶</span>` : ""}
         </div>
@@ -199,7 +199,7 @@
           <div class="rm-meta">${esc(n.category || "সংবাদ")} • ${esc(timeAgo(n.created_at))}</div>
         </div>
         <div class="rm-thumb">
-          <img src="${esc(n.image)}" alt="" loading="lazy">
+          <img src="${esc(n.image)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.parentElement.classList.add('img-missing')">
           ${n.video ? `<span class="rm-vid">▶</span>` : ""}
         </div>
       </li>`;

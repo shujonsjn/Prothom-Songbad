@@ -1,6 +1,7 @@
 /* ==========================================================
    ADMIN.CSS — Material Design 3 (M3) Admin Panel
    ========================================================== */
+@import url('https://fonts.maateen.me/solaiman-lipi/font.css');
 
 :root{
   /* Material 3 color tokens */
@@ -236,6 +237,143 @@ img{display:block;max-width:100%}
 }
 .field textarea:focus{ padding-top:21px; }
 /* (labels are always floating at the top — no transform needed) */
+
+/* ---- Rich Editor (contenteditable) ---- */
+.editor-toolbar{
+  display:flex;
+  align-items:center;
+  gap:4px;
+  padding:6px 8px;
+  background:var(--md-surface-cont);
+  border:1px solid var(--md-outline);
+  border-bottom:none;
+  border-radius:var(--md-radius-xs) var(--md-radius-xs) 0 0;
+}
+.ed-btn{
+  min-width:32px;height:32px;padding:0 6px;
+  font-size:14px;line-height:1;
+  border-radius:var(--md-radius-xs);
+  color:var(--md-on-surface-var);
+}
+.ed-btn:hover{ background:var(--md-surface-cont-hover); }
+.ed-sep{
+  width:1px;height:20px;
+  background:var(--md-outline-var);
+  margin:0 4px;
+}
+.ed-font-select{
+  height:32px;padding:0 8px;margin:0;
+  font-size:13px;font-family:inherit;
+  border:1px solid var(--md-outline);
+  border-radius:var(--md-radius-xs);
+  background:transparent;
+  color:var(--md-on-surface);
+  cursor:pointer;
+  outline:none;
+  min-width:90px;
+}
+.ed-font-select:focus{ border-color:var(--md-primary); }
+.ed-font-select option{ font-size:14px; }
+.editor-body{
+  min-height:200px;
+  padding:18px 16px 8px;
+  background:transparent;
+  border:1px solid var(--md-outline);
+  border-radius:0 0 var(--md-radius-xs) var(--md-radius-xs);
+  font-family:var(--md-font);
+  font-size:15px;
+  line-height:1.7;
+  color:var(--md-on-surface);
+  outline:none;
+  transition:border-color var(--md-dur-short) var(--md-easing);
+  overflow-y:auto;
+}
+.editor-body:focus{ border-color:var(--md-primary); }
+.editor-body figure{
+  margin:16px 0;text-align:center;clear:both;
+}
+.editor-body figure.figure-left{
+  float:left;margin:4px 20px 12px 0;max-width:50%;
+}
+.editor-body figure.figure-right{
+  float:right;margin:4px 0 12px 20px;max-width:50%;
+}
+.editor-body figure.figure-center{
+  text-align:center;margin-left:auto;margin-right:auto;
+}
+.editor-body figure.img-small img{ max-width:280px; }
+.editor-body figure.img-medium img{ max-width:480px; }
+.editor-body figure.img-large img{ max-width:100%; }
+.editor-body figure img{
+  max-width:100%;height:auto;border-radius:4px;
+}
+.editor-body figure figcaption{
+  font-size:13px;font-style:italic;color:var(--md-on-surface-var);padding-top:4px;
+}
+.editor-body:empty:before{
+  content:attr(data-placeholder);
+  color:var(--md-on-surface-var);
+  pointer-events:none;
+}
+.editor-body font{ font-family:inherit; }
+
+/* ---- Image Insert Popup ---- */
+.img-insert-overlay{
+  position:fixed;inset:0;z-index:999;
+  background:rgba(0,0,0,0.4);
+}
+.img-insert-popup{
+  position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+  z-index:1000;
+  background:var(--md-surface-cont-lowest);
+  border-radius:var(--md-radius-md);
+  box-shadow:0 8px 30px rgba(0,0,0,0.3);
+  width:420px;max-width:90vw;
+  padding:20px;
+}
+.img-insert-header{
+  display:flex;align-items:center;gap:8px;
+  margin-bottom:16px;
+  font-size:16px;
+}
+.img-insert-body .field{ margin:0 0 8px; }
+.img-insert-or{
+  text-align:center;font-size:12px;font-weight:600;
+  color:var(--md-on-surface-var);margin:4px 0;
+}
+.img-insert-file{
+  margin:4px 0 8px;
+}
+.img-insert-file input[type="file"]{
+  width:100%;padding:10px 12px;
+  border:1px dashed var(--md-outline-var);
+  border-radius:var(--md-radius-xs);
+  font-size:13px;
+  cursor:pointer;
+}
+.img-insert-actions{
+  display:flex;gap:8px;justify-content:flex-end;
+  margin-top:16px;
+}
+.img-insert-row{
+  display:flex;gap:12px;margin:8px 0;
+}
+.img-insert-opt{
+  flex:1;
+  background:var(--md-surface-cont);
+  border-radius:var(--md-radius-xs);
+  padding:8px 10px 10px;
+}
+.img-opt-label{
+  display:block;font-size:11px;font-weight:600;
+  color:var(--md-on-surface-var);margin-bottom:4px;
+  text-transform:uppercase;letter-spacing:0.5px;
+}
+.img-opt-radio{
+  display:inline-block;margin-right:10px;
+  font-size:13px;cursor:pointer;
+}
+.img-opt-radio input{ margin-right:3px; }
 
 input[type="file"]{
   width:100%;
@@ -1237,6 +1375,7 @@ button:disabled{ opacity:.38; pointer-events:none; }
   box-shadow:var(--md-shadow-1);
   position:relative;
   overflow:hidden;
+  cursor:pointer;
 }
 .profile-avatar::after{
   content:"";
@@ -1246,6 +1385,19 @@ button:disabled{ opacity:.38; pointer-events:none; }
   background:linear-gradient(135deg, rgba(255,255,255,.18), rgba(0,0,0,.06));
   pointer-events:none;
 }
+.profile-avatar-overlay{
+  position:absolute;
+  inset:0;
+  border-radius:50%;
+  background:rgba(0,0,0,.45);
+  display:flex; align-items:center; justify-content:center;
+  opacity:0;
+  transition:opacity .2s;
+  z-index:2;
+  cursor:pointer;
+}
+.profile-avatar:hover .profile-avatar-overlay{ opacity:1; }
+.profile-avatar-overlay .ms{ color:#fff; font-size:22px; }
 .profile-info{ flex:1; min-width:0; }
 .profile-name{
   font-family:"Roboto Slab", serif;
@@ -2105,7 +2257,7 @@ button:disabled{ opacity:.38; pointer-events:none; }
   border:1px solid var(--md-surface-cont);
   display:flex;
   flex-direction:column;
-  max-height:560px;
+  height:560px;
 }
 .loc-sidebar-header{
   display:flex;
@@ -2241,6 +2393,18 @@ button:disabled{ opacity:.38; pointer-events:none; }
   border-radius:50% !important;
   cursor:pointer !important;
   transition:background .15s, box-shadow .15s !important;
+  position:absolute !important;
+  z-index:5 !important;
+}
+.jvm-zoomin{
+  top:auto !important;
+  bottom:56px !important;
+  left:12px !important;
+}
+.jvm-zoomout{
+  top:auto !important;
+  bottom:14px !important;
+  left:12px !important;
 }
 .jvm-zoom-btn:hover{
   background:var(--md-primary-cont) !important;
@@ -2250,7 +2414,7 @@ button:disabled{ opacity:.38; pointer-events:none; }
 @media(max-width:900px){
   .loc-layout{ grid-template-columns:1fr; }
   .loc-map-wrap{ height:360px; }
-  .loc-sidebar{ max-height:300px; }
+  .loc-sidebar{ height:300px; max-height:300px; }
 }
 
 /* ==========================================================
@@ -2271,3 +2435,14 @@ button:disabled{ opacity:.38; pointer-events:none; }
   .box{ padding:36px 28px 28px; }
   .appbar h1{ font-size:18px; }
 }
+
+/* ---- Users / Admins ---- */
+#usersTable td:last-child{ white-space:nowrap; }
+.user-role-badge{
+  display:inline-block;font-size:11px;font-weight:600;
+  padding:2px 8px;border-radius:var(--md-radius-full);
+  text-transform:uppercase;
+}
+.user-role-badge.admin{ background:var(--md-primary-container); color:var(--md-on-primary-container); }
+.user-role-badge.superadmin{ background:#c1131d; color:#fff; }
+.user-last-login{ font-size:12px;color:var(--md-on-surface-var); }
