@@ -810,9 +810,15 @@ img{display:block;max-width:100%}
 
 /* ===== READ-MORE (আরও খবর) TEXT LIST ===== */
 .read-more{
+  grid-column:1 / -1;
   margin-top:36px;
   padding-top:18px;
   border-top:3px double #0a0a0a;
+}
+.read-more-inner{
+  max-width:900px;
+  margin:0 auto;
+  padding:0 20px;
 }
 .section-title-2{
   font-family:'Hind Siliguri',sans-serif;
@@ -844,7 +850,7 @@ img{display:block;max-width:100%}
 .rm-text{ flex:1; min-width:0; }
 .rm-title{
   font-family:'Playfair Display',serif;
-  font-size:18px;
+  font-size:20px;
   font-weight:700;
   line-height:1.35;
   color:#1a1a1a;
