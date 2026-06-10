@@ -3,6 +3,7 @@
   "routes": [
     { "src": "/api/cron-update", "dest": "api/cron-update.mjs" },
     { "src": "/api/(.*)", "dest": "api/index.mjs" },
+    { "src": "/sitemap.xml", "dest": "api/index.mjs" },
     { "src": "/(.*\\..*)", "dest": "/$1" },
     { "src": "/(.*)", "dest": "/$1" }
   ]

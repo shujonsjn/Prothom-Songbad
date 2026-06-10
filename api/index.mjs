@@ -1888,6 +1888,29 @@ app.delete("/api/admins/:id", requireAuth, async (req, res) => {
   res.json({ ok: true });
 });
 
+/* ===== Sitemap ===== */
+app.get("/sitemap.xml", async (req, res) => {
+  try {
+    await ready();
+    const rows = await db.prepare("SELECT id, created_at, time FROM news ORDER BY id DESC LIMIT 50000").all();
+    const site = "https://prothom-songbad.vercel.app";
+    let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
+    xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
+    xml += `  <url><loc>${site}/</loc><priority>1.0</priority></url>\n`;
+    xml += `  <url><loc>${site}/news.html?id=0</loc><priority>0.8</priority></url>\n`;
+    for (const r of rows) {
+      const lastmod = (r.time || r.created_at || "").replace(" ", "T") + "+06:00";
+      xml += `  <url><loc>${site}/news.html?id=${r.id}</loc><lastmod>${lastmod.replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c])}</lastmod><priority>0.6</priority></url>\n`;
+    }
+    xml += "</urlset>";
+    res.setHeader("Content-Type", "application/xml; charset=utf-8");
+    res.setHeader("Cache-Control", "public, max-age=3600");
+    res.send(xml);
+  } catch (err) {
+    res.status(500).send("Server error");
+  }
+});
+
 /* ===== Serverless handler ===== */
 export default async function handler(req, res) {
   await ready();

@@ -38,6 +38,25 @@
     /* kicker: category in red */
     $("kicker").textContent = (n.category || "সর্বশেষ") + (n.subcategory ? "  ›  " + n.subcategory : "");
 
+    /* breadcrumb */
+    const bc = document.getElementById("breadcrumbCat");
+    if(bc) bc.textContent = n.category || "সংবাদ";
+
+    /* canonical + OG + Twitter meta */
+    const articleUrl = window.location.href.split('?')[0] + "?id=" + n.id;
+    setMeta("link", "canonical", articleUrl);
+    setMeta("meta", "og:url", articleUrl);
+    setMeta("meta", "og:title", n.title || "প্রথম সংবাদ");
+    setMeta("meta", "og:description", (n.details || "").slice(0, 200) || "প্রথম সংবাদ — বাংলাদেশ ও বিশ্বের নির্ভরযোগ্য সংবাদ");
+    if(n.image) setMeta("meta", "og:image", n.image.startsWith("http") ? n.image : "https://prothom-songbad.vercel.app" + n.image);
+    setMeta("meta", "twitter:title", n.title || "প্রথম সংবাদ");
+    setMeta("meta", "twitter:description", (n.details || "").slice(0, 200) || "প্রথম সংবাদ");
+    if(n.image) setMeta("meta", "twitter:image", n.image.startsWith("http") ? n.image : "https://prothom-songbad.vercel.app" + n.image);
+    setMeta("meta", "description", (n.title || "") + " — প্রথম সংবাদ");
+
+    /* JSON-LD NewsArticle */
+    injectJsonLd(n);
+
     /* headline */
     $("title").textContent = n.title || "শিরোনাম পাওয়া যায়নি";
 
@@ -199,7 +218,7 @@
       if(!filtered.length){ box.innerHTML = '<p class="aside-empty">আর কোনো খবর নেই</p>'; return; }
       box.innerHTML = filtered.map(x => `
         <a class="related-item" href="/news.html?id=${x.id}">
-          <div class="related-thumb"><img src="${escAttr(x.image || '')}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.parentElement.classList.add('img-missing')"></div>
+          <div class="related-thumb"><img src="${escAttr(x.image || '')}" alt="${escAttr(x.title || '')}" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.parentElement.classList.add('img-missing')"></div>
           <div class="related-body">
             <div class="related-cat">${escHtml(x.subcategory || x.category || "")}</div>
             <div class="related-title">${escHtml(x.title || "")}</div>
@@ -321,6 +340,56 @@
     return String(s || "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
   }
   function escAttr(s){ return escHtml(s); }
+
+  function setMeta(tag, prop, content){
+    if(!content) return;
+    let el;
+    if(tag === "link"){
+      el = document.querySelector('link[rel="' + prop + '"]');
+      if(!el){ el = document.createElement("link"); el.rel = prop; document.head.appendChild(el); }
+    } else {
+      const attr = prop.startsWith("og:") ? "property" : "name";
+      el = document.querySelector('meta[' + attr + '="' + prop + '"]');
+      if(!el){ el = document.createElement("meta"); el.setAttribute(attr, prop); document.head.appendChild(el); }
+    }
+    el.setAttribute(tag === "link" ? "href" : "content", content);
+  }
+
+  function injectJsonLd(n){
+    const existing = document.getElementById("jsonLd");
+    if(existing) existing.remove();
+    const ld = {
+      "@context": "https://schema.org",
+      "@type": "NewsArticle",
+      "headline": n.title || "",
+      "description": (n.details || "").slice(0, 300) || "",
+      "image": n.image && n.image.startsWith("http") ? n.image : "https://prothom-songbad.vercel.app/img/logo.svg",
+      "datePublished": n.created_at || n.time || "",
+      "dateModified": n.time || n.created_at || "",
+      "author": [{
+        "@type": "Person",
+        "name": "নিজস্ব প্রতিবেদক",
+        "url": "https://prothom-songbad.vercel.app/"
+      }],
+      "publisher": {
+        "@type": "Organization",
+        "name": "প্রথম সংবাদ",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://prothom-songbad.vercel.app/img/logo.svg"
+        }
+      },
+      "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": window.location.href.split('?')[0] + "?id=" + (n.id || "")
+      }
+    };
+    const script = document.createElement("script");
+    script.type = "application/ld+json";
+    script.id = "jsonLd";
+    script.textContent = JSON.stringify(ld);
+    document.head.appendChild(script);
+  }
 
   function trackView(newsId){
     try {

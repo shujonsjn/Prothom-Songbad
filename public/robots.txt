@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://prothom-songbad.vercel.app/sitemap.xml
