@@ -1,9 +1,8 @@
-name: Job-1
+name: Job-2
 
 on:
-  # প্রতি ১০ মিনিটে: sports পেজ scrape + summarize
   schedule:
-    - cron: "*/10 * * * *"
+    - cron: "*/15 * * * *"
   workflow_dispatch:
 
 jobs:
@@ -11,9 +10,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 3
     steps:
-      - name: Trigger cron endpoint
+      - name: Trigger Job-2 cron endpoint
         run: |
-          URL="https://prothom-songbad.vercel.app/api/cron-update?secret=${{ secrets.CRON_SECRET }}"
+          URL="https://prothom-songbad.vercel.app/api/cron-update2?secret=${{ secrets.CRON_SECRET }}"
           echo "Calling $URL"
           RESPONSE=$(curl -sS -w "\nHTTP_STATUS:%{http_code}" "$URL")
           echo "$RESPONSE"
