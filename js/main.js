@@ -497,6 +497,7 @@
   const qp = new URLSearchParams();
   if(activeCat && activeCat !== "all") qp.set("category", activeCat);
   if(activeSub)                       qp.set("sub", activeSub);
+  qp.set("limit", "50");
   const apiUrl = "/api/news" + (qp.toString() ? "?" + qp.toString() : "");
 
   /* page-view tracking (fire-and-forget) */

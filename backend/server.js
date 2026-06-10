@@ -83,14 +83,24 @@ function parseArticleImages(raw) {
 app.get("/api/news", async (req, res) => {
   try {
     const category = (req.query.category || "").toString().trim();
-    let rows;
+    const subcategory = (req.query.sub || req.query.subcategory || "").toString().trim();
+    const limit = Math.min(Number(req.query.limit) || 0, 100);
+    const where = [];
+    const args  = [];
     if (category && category !== "all") {
-      rows = await db.prepare(
-        "SELECT * FROM news WHERE category = ? ORDER BY id DESC"
-      ).all(category);
-    } else {
-      rows = await db.prepare("SELECT * FROM news ORDER BY id DESC").all();
+      where.push("category = ?");
+      args.push(category);
     }
+    if (subcategory) {
+      where.push("subcategory = ?");
+      args.push(subcategory);
+    }
+    const base = where.length
+      ? `SELECT * FROM news WHERE ${where.join(" AND ")} ORDER BY id DESC`
+      : "SELECT * FROM news ORDER BY id DESC";
+    const sql = limit > 0 ? `${base} LIMIT ?` : base;
+    if (limit > 0) args.push(limit);
+    const rows = await db.prepare(sql).all(...args);
     res.json(rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
